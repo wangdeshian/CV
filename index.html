@@ -3,79 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>得賢引才 - 協助溝通即時平台</title>
+    <title>得賢引才 - 案件進度追蹤表</title>
+    
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
     <style>
-        body { font-family: "微軟正黑體", sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .message-box { border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 15px; background: #fafafa; }
-        .msg-item { padding: 8px; border-bottom: 1px solid #eee; }
-        input[type="text"] { width: 70%; padding: 8px; }
-        button { padding: 8px 15px; background: #2c3e50; color: white; border: none; cursor: pointer; }
+        body {
+            font-family: "微軟正黑體", sans-serif;
+            background-color: #f8f9fa;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* 讓表格看起來更像 Excel */
+        table.dataTable {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table.dataTable th, table.dataTable td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        table.dataTable th {
+            background-color: #f1f5f9;
+            color: #333;
+            font-weight: bold;
+        }
+        table.dataTable tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* 輸入表單區塊設計 */
+        .form-section {
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn-submit {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn-submit:hover {
+            background-color: #218838;
+        }
+        /* 刪除按鈕樣式 */
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>即時協助溝通進度板</h2>
-    <p>任何人在此輸入的內容，雙方網頁皆會即時同步顯示。</p>
+    <h2>得賢引才 - 聘工進度即時追蹤表</h2>
     
-    <div class="message-box" id="messages">
+    <div class="form-section" id="inputForm">
+        <div class="form-group">
+            <label>雇主姓名</label>
+            <input type="text" id="empName" placeholder="例如：王小明">
         </div>
+        <div class="form-group">
+            <label>想看的工人</label>
+            <input type="text" id="targetWorker" placeholder="例如：Siti, Mary">
+        </div>
+        <div class="form-group">
+            <label>確定工人</label>
+            <select id="confirmedWorker">
+                <option value="尚未確定">尚未確定</option>
+                <option value="已確定">已確定</option>
+                <option value="取消">取消</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>請公司推薦</label>
+            <select id="needRecommendation">
+                <option value="否">否</option>
+                <option value="是">是</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>視訊時間</label>
+            <input type="datetime-local" id="videoTime">
+        </div>
+        <div class="form-group">
+            <label>聘工表狀態</label>
+            <select id="formStatus">
+                <option value="未填寫">未填寫</option>
+                <option value="處理中">處理中</option>
+                <option value="已完成">已完成</option>
+            </select>
+        </div>
+        <button class="btn-submit" id="submitBtn">新增/更新進度</button>
+    </div>
 
-    <input type="text" id="msgInput" placeholder="請輸入更新進度或留言...">
-    <button id="sendBtn">送出資料</button>
+    <table id="progressTable" class="display">
+        <thead>
+            <tr>
+                <th>雇主姓名</th>
+                <th>想看的工人</th>
+                <th>確定工人</th>
+                <th>請公司推薦</th>
+                <th>視訊時間</th>
+                <th>聘工表狀態</th>
+                <th>最後更新時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
 </div>
 
 <script type="module">
-    // 1. 載入 Firebase 核心、Firestore 資料庫與 Analytics 分析功能
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 2. 使用你剛剛取得的專屬 Firebase 金鑰
+    // 【重要】請替換成您自己的 Firebase 金鑰！
     const firebaseConfig = {
         apiKey: "AIzaSyAB-b45xKSpUg5I43NUxZtzjytj9p5Fu_A",
         authDomain: "adamcv-79d47.firebaseapp.com",
         projectId: "adamcv-79d47",
         storageBucket: "adamcv-79d47.firebasestorage.app",
         messagingSenderId: "1053331292517",
-        appId: "1:1053331292517:web:f4414fcdf0ec8d64a8618c",
-        measurementId: "G-V3HQSCP1VP"
+        appId: "1:1053331292517:web:f4414fcdf0ec8d64a8618c"
     };
 
-    // 3. 初始化 Firebase 與相關服務
+    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
     const db = getFirestore(app);
-    
-    // 建立名為 communications 的資料集合，用來儲存對話紀錄
-    const messagesCol = collection(db, "communications"); 
+    const progressCol = collection(db, "hiring_progress"); // 建立名為 hiring_progress 的集合
 
-    // 4. 即時監聽資料庫變化 (Realtime Updates)
-    const q = query(messagesCol, orderBy("createdAt", "asc"));
+    // 初始化 DataTable (套用 Excel 風格與搜尋/排序功能)
+    let dataTable;
+    $(document).ready(function() {
+        dataTable = $('#progressTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' // 中文化介面
+            },
+            pageLength: 25 // 預設顯示 25 筆
+        });
+    });
+
+    // 格式化時間的輔助函數
+    function formatDate(timestamp) {
+        if (!timestamp) return "";
+        const date = timestamp.toDate();
+        return date.toLocaleString('zh-TW', { 
+            year: 'numeric', month: '2-digit', day: '2-digit', 
+            hour: '2-digit', minute: '2-digit' 
+        });
+    }
+
+    // 格式化 input[type="datetime-local"] 的顯示方式
+    function formatVideoTimeForDisplay(timeString) {
+        if(!timeString) return "尚未安排";
+        return timeString.replace("T", " ");
+    }
+
+    // 【即時監聽】從 Firebase 讀取資料並更新表格
+    const q = query(progressCol, orderBy("updatedAt", "desc"));
     onSnapshot(q, (snapshot) => {
-        const msgDiv = document.getElementById("messages");
-        msgDiv.innerHTML = ""; // 清空舊畫面
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            msgDiv.innerHTML += `<div class="msg-item">${data.text}</div>`;
-        });
-        msgDiv.scrollTop = msgDiv.scrollHeight; // 自動捲動到最底
+        if(dataTable) {
+            dataTable.clear(); // 清空現有表格資料
+            
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const docId = docSnap.id;
+                
+                // 建立刪除按鈕，並綁定 document ID
+                const actionBtn = `<button class="btn-delete" data-id="${docId}">刪除</button>`;
+
+                // 將資料加入 DataTable
+                dataTable.row.add([
+                    data.empName || "",
+                    data.targetWorker || "無",
+                    data.confirmedWorker || "尚未確定",
+                    data.needRecommendation || "否",
+                    formatVideoTimeForDisplay(data.videoTime),
+                    data.formStatus || "未填寫",
+                    formatDate(data.updatedAt),
+                    actionBtn
+                ]);
+            });
+            dataTable.draw(); // 重新渲染表格
+        }
     });
 
-    // 5. 將新資料寫入資料庫
-    document.getElementById("sendBtn").addEventListener("click", async () => {
-        const input = document.getElementById("msgInput");
-        if (input.value.trim() === "") return;
+    // 【寫入】按下送出按鈕時，將資料存入 Firebase
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+        const empName = document.getElementById("empName").value.trim();
         
-        // 寫入 Firestore
-        await addDoc(messagesCol, {
-            text: input.value,
-            createdAt: serverTimestamp() // 記錄伺服器時間以利排序
-        });
-        
-        input.value = ""; // 清空輸入框
+        // 簡單的防呆檢查
+        if (empName === "") {
+            alert("請至少輸入「雇主姓名」！");
+            return;
+        }
+
+        // 收集表單資料
+        const newRecord = {
+            empName: empName,
+            targetWorker: document.getElementById("targetWorker").value.trim(),
+            confirmedWorker: document.getElementById("confirmedWorker").value,
+            needRecommendation: document.getElementById("needRecommendation").value,
+            videoTime: document.getElementById("videoTime").value,
+            formStatus: document.getElementById("formStatus").value,
+            updatedAt: serverTimestamp() // 記錄最後更新時間
+        };
+
+        try {
+            await addDoc(progressCol, newRecord);
+            // 清空輸入框（保留下拉選單的預設值）
+            document.getElementById("empName").value = "";
+            document.getElementById("targetWorker").value = "";
+            document.getElementById("videoTime").value = "";
+        } catch (error) {
+            console.error("寫入錯誤：", error);
+            alert("儲存失敗，請檢查網路連線或 F12 Console 錯誤訊息。");
+        }
     });
+
+    // 【刪除】使用事件委派處理表格內的刪除按鈕
+    $('#tableBody').on('click', '.btn-delete', async function() {
+        if(confirm("確定要刪除這筆進度紀錄嗎？")) {
+            const docId = $(this).data('id');
+            try {
+                await deleteDoc(doc(db, "hiring_progress", docId));
+            } catch (error) {
+                console.error("刪除錯誤：", error);
+                alert("刪除失敗！");
+            }
+        }
+    });
+
 </script>
 
 </body>
