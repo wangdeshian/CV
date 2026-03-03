@@ -2,32 +2,37 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>得賢引才 - 案件進度追蹤表</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>得賢引才 - 案件進度追蹤表</title>
     
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
     <style>
         body {
             font-family: "微軟正黑體", sans-serif;
             background-color: #f8f9fa;
-            margin: 20px;
+            margin: 10px; /* 手機版縮小邊距 */
         }
         .container {
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            padding: 25px;
+            padding: 15px; /* 手機版縮小內距 */
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-sizing: border-box; /* 確保 padding 不會撐破手機螢幕 */
         }
         h2 {
             color: #2c3e50;
             border-bottom: 2px solid #3498db;
             padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: 1.2rem; /* 手機版縮小標題 */
         }
         
         /* 讓表格看起來更像 Excel */
@@ -49,7 +54,7 @@
             background-color: #f9f9f9;
         }
 
-        /* 輸入表單區塊設計 */
+        /* 輸入表單區塊設計 - 適合手機的排列 */
         .form-section {
             background-color: #fdfdfd;
             border: 1px solid #eee;
@@ -57,10 +62,27 @@
             margin-bottom: 20px;
             border-radius: 6px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: 1fr; /* 手機版預設直排：1個欄位 */
             gap: 15px;
-            align-items: end;
         }
+        
+        /* 平板或電腦版時，自動變成多欄位 */
+        @media (min-width: 768px) {
+            .form-section {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                align-items: end;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            body {
+                margin: 20px;
+            }
+            .container {
+                padding: 25px;
+            }
+        }
+
         .form-group {
             display: flex;
             flex-direction: column;
@@ -72,20 +94,23 @@
             font-weight: bold;
         }
         .form-group input, .form-group select {
-            padding: 8px;
+            padding: 10px; /* 增加點擊區域，方便手機手指點擊 */
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 16px; /* 避免 iOS Safari 自動放大畫面 */
         }
         .btn-submit {
-            padding: 10px 15px;
+            padding: 12px 15px;
             background-color: #28a745;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 16px;
             transition: background 0.3s;
+            width: 100%; /* 手機版按鈕滿版寬度 */
+            margin-top: 10px;
         }
         .btn-submit:hover {
             background-color: #218838;
@@ -95,13 +120,23 @@
             background-color: #dc3545;
             color: white;
             border: none;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 3px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 14px;
         }
         .btn-delete:hover {
             background-color: #c82333;
+        }
+
+        /* 讓被點兩下的欄位變成輸入框時的樣式 */
+        .edit-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #007bff;
+            border-radius: 3px;
         }
     </style>
 </head>
@@ -146,10 +181,10 @@
                 <option value="已完成">已完成</option>
             </select>
         </div>
-        <button class="btn-submit" id="submitBtn">新增/更新進度</button>
+        <button class="btn-submit" id="submitBtn">新增進度紀錄</button>
     </div>
 
-    <table id="progressTable" class="display">
+    <table id="progressTable" class="display dt-responsive nowrap" style="width:100%">
         <thead>
             <tr>
                 <th>雇主姓名</th>
@@ -169,7 +204,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // 【重要】請替換成您自己的 Firebase 金鑰！
     const firebaseConfig = {
@@ -184,20 +219,21 @@
     // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const progressCol = collection(db, "hiring_progress"); // 建立名為 hiring_progress 的集合
+    const progressCol = collection(db, "hiring_progress"); 
 
-    // 初始化 DataTable (套用 Excel 風格與搜尋/排序功能)
+    // 初始化 DataTable (套用 Excel 風格、搜尋功能與手機版響應式外掛)
     let dataTable;
     $(document).ready(function() {
         dataTable = $('#progressTable').DataTable({
+            responsive: true, // 啟用手機版自動摺疊功能
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' // 中文化介面
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json'
             },
-            pageLength: 25 // 預設顯示 25 筆
+            pageLength: 25,
+            ordering: false // 關閉前端預設排序，統一由 Firebase 的時間排序
         });
     });
 
-    // 格式化時間的輔助函數
     function formatDate(timestamp) {
         if (!timestamp) return "";
         const date = timestamp.toDate();
@@ -207,7 +243,6 @@
         });
     }
 
-    // 格式化 input[type="datetime-local"] 的顯示方式
     function formatVideoTimeForDisplay(timeString) {
         if(!timeString) return "尚未安排";
         return timeString.replace("T", " ");
@@ -217,42 +252,39 @@
     const q = query(progressCol, orderBy("updatedAt", "desc"));
     onSnapshot(q, (snapshot) => {
         if(dataTable) {
-            dataTable.clear(); // 清空現有表格資料
+            dataTable.clear(); 
             
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 const docId = docSnap.id;
                 
-                // 建立刪除按鈕，並綁定 document ID
                 const actionBtn = `<button class="btn-delete" data-id="${docId}">刪除</button>`;
 
-                // 將資料加入 DataTable
+                // 將欄位名稱綁在 data 屬性上，方便後續點兩下修改時知道要更新哪個欄位
                 dataTable.row.add([
-                    data.empName || "",
-                    data.targetWorker || "無",
-                    data.confirmedWorker || "尚未確定",
-                    data.needRecommendation || "否",
-                    formatVideoTimeForDisplay(data.videoTime),
-                    data.formStatus || "未填寫",
+                    `<span class="editable" data-id="${docId}" data-field="empName">${data.empName || ""}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="targetWorker">${data.targetWorker || "無"}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="confirmedWorker">${data.confirmedWorker || "尚未確定"}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="needRecommendation">${data.needRecommendation || "否"}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="formStatus">${data.formStatus || "未填寫"}</span>`,
                     formatDate(data.updatedAt),
                     actionBtn
                 ]);
             });
-            dataTable.draw(); // 重新渲染表格
+            dataTable.draw(false); // 重新渲染表格，保持目前頁碼
         }
     });
 
-    // 【寫入】按下送出按鈕時，將資料存入 Firebase
+    // 【新增】按下送出按鈕時，將資料存入 Firebase
     document.getElementById("submitBtn").addEventListener("click", async () => {
         const empName = document.getElementById("empName").value.trim();
         
-        // 簡單的防呆檢查
         if (empName === "") {
             alert("請至少輸入「雇主姓名」！");
             return;
         }
 
-        // 收集表單資料
         const newRecord = {
             empName: empName,
             targetWorker: document.getElementById("targetWorker").value.trim(),
@@ -260,32 +292,105 @@
             needRecommendation: document.getElementById("needRecommendation").value,
             videoTime: document.getElementById("videoTime").value,
             formStatus: document.getElementById("formStatus").value,
-            updatedAt: serverTimestamp() // 記錄最後更新時間
+            updatedAt: serverTimestamp() 
         };
 
         try {
             await addDoc(progressCol, newRecord);
-            // 清空輸入框（保留下拉選單的預設值）
             document.getElementById("empName").value = "";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
         } catch (error) {
             console.error("寫入錯誤：", error);
-            alert("儲存失敗，請檢查網路連線或 F12 Console 錯誤訊息。");
+            alert("儲存失敗！");
         }
     });
 
-    // 【刪除】使用事件委派處理表格內的刪除按鈕
+    // 【刪除】
     $('#tableBody').on('click', '.btn-delete', async function() {
-        if(confirm("確定要刪除這筆進度紀錄嗎？")) {
+        if(confirm("確定要刪除這筆紀錄嗎？")) {
             const docId = $(this).data('id');
             try {
                 await deleteDoc(doc(db, "hiring_progress", docId));
             } catch (error) {
                 console.error("刪除錯誤：", error);
-                alert("刪除失敗！");
             }
         }
+    });
+
+    // 【點兩下修改】功能實作
+    $('#tableBody').on('dblclick', '.editable', function() {
+        // 如果已經是輸入框狀態，就不處理
+        if ($(this).find('input, select').length > 0) return;
+
+        const currentText = $(this).text();
+        const docId = $(this).data('id');
+        const fieldName = $(this).data('field');
+        const $cell = $(this);
+        let inputHtml = '';
+
+        // 根據不同欄位，產生不同的編輯元件 (輸入框或下拉選單)
+        if (fieldName === 'confirmedWorker') {
+            inputHtml = `
+                <select class="edit-input">
+                    <option value="尚未確定" ${currentText==='尚未確定'?'selected':''}>尚未確定</option>
+                    <option value="已確定" ${currentText==='已確定'?'selected':''}>已確定</option>
+                    <option value="取消" ${currentText==='取消'?'selected':''}>取消</option>
+                </select>`;
+        } else if (fieldName === 'needRecommendation') {
+            inputHtml = `
+                <select class="edit-input">
+                    <option value="否" ${currentText==='否'?'selected':''}>否</option>
+                    <option value="是" ${currentText==='是'?'selected':''}>是</option>
+                </select>`;
+        } else if (fieldName === 'formStatus') {
+            inputHtml = `
+                <select class="edit-input">
+                    <option value="未填寫" ${currentText==='未填寫'?'selected':''}>未填寫</option>
+                    <option value="處理中" ${currentText==='處理中'?'selected':''}>處理中</option>
+                    <option value="已完成" ${currentText==='已完成'?'selected':''}>已完成</option>
+                </select>`;
+        } else if (fieldName === 'videoTime') {
+            const rawVal = $(this).data('raw-val'); // 取得未格式化前的 T 格式時間
+            inputHtml = `<input type="datetime-local" class="edit-input" value="${rawVal}">`;
+        } else {
+            // 一般文字欄位
+            inputHtml = `<input type="text" class="edit-input" value="${currentText}">`;
+        }
+
+        // 替換為編輯元件，並自動聚焦
+        $cell.html(inputHtml);
+        $cell.find('.edit-input').focus();
+
+        // 當失去焦點 (點擊旁邊) 或按下 Enter 時，儲存資料
+        $cell.find('.edit-input').on('blur keypress', async function(e) {
+            // 如果是按鍵事件，只有按下 Enter (13) 才觸發儲存
+            if (e.type === 'keypress' && e.which !== 13) return;
+
+            const newValue = $(this).val().trim();
+            
+            // 如果是雇主姓名且變成空白，阻止儲存並恢復原狀
+            if (fieldName === 'empName' && newValue === "") {
+                alert("雇主姓名不能為空白！");
+                $cell.html(currentText); // 恢復原狀
+                return;
+            }
+
+            // 將更新寫入 Firebase
+            try {
+                const docRef = doc(db, "hiring_progress", docId);
+                const updateData = {};
+                updateData[fieldName] = newValue;
+                updateData['updatedAt'] = serverTimestamp(); // 同時更新最後修改時間
+
+                // 為了避免畫面閃爍，我們先不寫回舊文字，等 Firebase 觸發 onSnapshot 自動更新畫面
+                await updateDoc(docRef, updateData);
+            } catch (error) {
+                console.error("更新錯誤：", error);
+                alert("修改失敗！");
+                $cell.html(currentText); // 失敗則恢復原狀
+            }
+        });
     });
 
 </script>
