@@ -54,8 +54,7 @@
             background-color: #f9f9f9;
         }
 
-        /* 狀態為「已確定」時的整列淡綠色背景 */
-        table.dataTable tbody tr.row-confirmed td {
+        .row-confirmed td {
             background-color: #e8f5e9 !important; 
         }
         .status-confirmed {
@@ -63,7 +62,6 @@
             font-weight: bold;
         }
 
-        /* 解決空白欄位無法點擊的關鍵 CSS */
         .editable {
             display: block;          
             min-height: 24px;        
@@ -107,14 +105,12 @@
             font-size: 16px; 
         }
 
-        /* 🟢 按鈕群組的排版設計 */
         .button-group {
             display: flex;
-            flex-direction: column; /* 手機版預設上下堆疊 */
+            flex-direction: column; 
             gap: 10px;
         }
 
-        /* 原本的綠色提交按鈕 */
         .btn-submit {
             padding: 12px 15px;
             background-color: #28a745;
@@ -129,7 +125,6 @@
         }
         .btn-submit:hover { background-color: #218838; }
 
-        /* 🟢 新增的藍色連結按鈕 */
         .btn-link {
             display: flex;
             align-items: center;
@@ -147,19 +142,17 @@
         }
         .btn-link:hover { background-color: #0056b3; }
 
-        /* 電腦版/平板版的版面配置 */
         @media (min-width: 768px) {
             .form-section {
                 grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
                 align-items: end;
             }
-            /* 🟢 在大螢幕時，讓按鈕群組佔滿整行，且兩個按鈕左右並排 */
             .button-group {
                 flex-direction: row;
                 grid-column: 1 / -1; 
             }
             .btn-submit, .btn-link {
-                flex: 1; /* 讓兩個按鈕平均分配寬度 */
+                flex: 1; 
             }
             h2 { font-size: 1.5rem; }
             body { margin: 20px; }
@@ -234,7 +227,7 @@
         </div>
         
         <div class="button-group">
-            <button class="btn-submit" id="submitBtn">新增進度紀錄</button>
+            <button type="button" class="btn-submit" id="submitBtn">新增進度紀錄</button>
             <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">聘工表填寫</a>
         </div>
     </div>
@@ -305,7 +298,7 @@
                 const data = docSnap.data();
                 const docId = docSnap.id;
                 
-                const actionBtn = `<button class="btn-delete" data-id="${docId}">刪除</button>`;
+                const actionBtn = `<button type="button" class="btn-delete" data-id="${docId}">刪除</button>`;
                 const isConfirmed = data.confirmedWorker === '已確定';
 
                 const rowNode = dataTable.row.add([
@@ -328,7 +321,8 @@
         }
     });
 
-    document.getElementById("submitBtn").addEventListener("click", async () => {
+    document.getElementById("submitBtn").addEventListener("click", async (e) => {
+        e.preventDefault(); // 攔截非預期的觸發行為
         const empName = document.getElementById("empName").value.trim();
         if (empName === "") { alert("請至少輸入「雇主姓名」！"); return; }
 
@@ -397,15 +391,33 @@
         }
 
         $cell.html(inputHtml);
-        $cell.find('.edit-input').focus();
+        const $input = $cell.find('.edit-input');
+        $input.focus();
 
-        $cell.find('.edit-input').on('blur keypress', async function(e) {
+        let isSaving = false; // 🟢 防呆鎖：防止重複存檔
+
+        $input.on('blur keypress', async function(e) {
+            // 如果是按鍵事件，且不是 Enter，直接略過
             if (e.type === 'keypress' && e.which !== 13) return;
+            
+            // 🟢 如果是按下 Enter，強制阻擋手機瀏覽器亂點按鈕
+            if (e.which === 13) e.preventDefault();
+
+            // 🟢 檢查防呆鎖，如果已經在存檔了就不允許第二次執行
+            if (isSaving) return;
+            isSaving = true;
 
             const newValue = $(this).val().trim();
+
             if (fieldName === 'empName' && newValue === "") {
                 alert("雇主姓名不能為空白！");
                 $cell.html(currentText); 
+                return;
+            }
+
+            // 🟢 如果改完發現文字根本沒變，直接關閉，不浪費時間存檔
+            if (newValue === currentText.trim()) {
+                $cell.html(currentText);
                 return;
             }
 
@@ -415,8 +427,10 @@
                 updateData[fieldName] = newValue;
                 updateData['updatedAt'] = serverTimestamp(); 
                 await updateDoc(docRef, updateData);
+                // 成功後畫面會透過 onSnapshot 自動刷新，不用手動改字
             } catch (error) {
                 console.error("更新錯誤：", error);
+                alert("修改失敗，請稍後再試！");
                 $cell.html(currentText); 
             }
         });
