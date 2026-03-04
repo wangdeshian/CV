@@ -54,14 +54,30 @@
             background-color: #f9f9f9;
         }
 
-        /* 狀態為「已確定」時的整列淡綠色背景 */
+        /* 🟢 狀態為「已確定」時的整列淡綠色背景 */
         table.dataTable tbody tr.row-confirmed td {
             background-color: #e8f5e9 !important; 
         }
-        /* 「已確定」文字特別加深綠色與粗體 */
         .status-confirmed {
             color: #1b5e20;
             font-weight: bold;
+        }
+
+        /* 🟢 解決空白欄位無法點擊的關鍵 CSS */
+        .editable {
+            display: block;          /* 讓元素撐開填滿格子 */
+            min-height: 24px;        /* 確保空白時也有高度可以點擊 */
+            min-width: 40px;         /* 確保空白時也有寬度可以點擊 */
+            cursor: pointer;         /* 滑鼠移過去變成點擊的手指 */
+            padding: 2px;
+            border: 1px dashed transparent; /* 預先留出邊框空間，避免畫面跳動 */
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        /* 當游標滑過可編輯區域時，顯示藍色虛線框作為提示 */
+        .editable:hover {
+            border-color: #3498db;
+            background-color: #f0f8ff;
         }
 
         .form-section {
@@ -260,7 +276,6 @@
                     `<span class="editable" data-id="${docId}" data-field="targetWorker">${data.targetWorker || "無"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker">${data.confirmedWorker || "尚未確定"}</span>`,
-                    // 🟢 重新加回 class="editable"，允許事後點兩下補填或修改編號
                     `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId">${data.confirmedWorkerId || ""}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="formStatus">${data.formStatus || "未填寫"}</span>`,
                     formatDate(data.updatedAt),
@@ -340,7 +355,6 @@
             const rawVal = $(this).data('raw-val'); 
             inputHtml = `<input type="datetime-local" class="edit-input" value="${rawVal}">`;
         } else {
-            // 一般文字欄位 (包含 empName, targetWorker, confirmedWorkerId) 均可使用此輸入框修改
             inputHtml = `<input type="text" class="edit-input" value="${currentText}">`;
         }
 
