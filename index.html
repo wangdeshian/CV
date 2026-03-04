@@ -54,7 +54,7 @@
             background-color: #f9f9f9;
         }
 
-        /* 🟢 狀態為「已確定」時的整列淡綠色背景 */
+        /* 狀態為「已確定」時的整列淡綠色背景 */
         table.dataTable tbody tr.row-confirmed td {
             background-color: #e8f5e9 !important; 
         }
@@ -63,18 +63,17 @@
             font-weight: bold;
         }
 
-        /* 🟢 解決空白欄位無法點擊的關鍵 CSS */
+        /* 解決空白欄位無法點擊的關鍵 CSS */
         .editable {
-            display: block;          /* 讓元素撐開填滿格子 */
-            min-height: 24px;        /* 確保空白時也有高度可以點擊 */
-            min-width: 40px;         /* 確保空白時也有寬度可以點擊 */
-            cursor: pointer;         /* 滑鼠移過去變成點擊的手指 */
+            display: block;          
+            min-height: 24px;        
+            min-width: 40px;         
+            cursor: pointer;         
             padding: 2px;
-            border: 1px dashed transparent; /* 預先留出邊框空間，避免畫面跳動 */
+            border: 1px dashed transparent; 
             border-radius: 4px;
             transition: all 0.2s ease;
         }
-        /* 當游標滑過可編輯區域時，顯示藍色虛線框作為提示 */
         .editable:hover {
             border-color: #3498db;
             background-color: #f0f8ff;
@@ -91,16 +90,6 @@
             gap: 15px;
         }
         
-        @media (min-width: 768px) {
-            .form-section {
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
-                align-items: end;
-            }
-            h2 { font-size: 1.5rem; }
-            body { margin: 20px; }
-            .container { padding: 25px; }
-        }
-
         .form-group {
             display: flex;
             flex-direction: column;
@@ -117,6 +106,15 @@
             border-radius: 4px;
             font-size: 16px; 
         }
+
+        /* 🟢 按鈕群組的排版設計 */
+        .button-group {
+            display: flex;
+            flex-direction: column; /* 手機版預設上下堆疊 */
+            gap: 10px;
+        }
+
+        /* 原本的綠色提交按鈕 */
         .btn-submit {
             padding: 12px 15px;
             background-color: #28a745;
@@ -128,10 +126,46 @@
             font-size: 16px;
             transition: background 0.3s;
             width: 100%; 
-            margin-top: 10px;
         }
         .btn-submit:hover { background-color: #218838; }
-        
+
+        /* 🟢 新增的藍色連結按鈕 */
+        .btn-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.3s;
+            width: 100%; 
+            box-sizing: border-box;
+        }
+        .btn-link:hover { background-color: #0056b3; }
+
+        /* 電腦版/平板版的版面配置 */
+        @media (min-width: 768px) {
+            .form-section {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+                align-items: end;
+            }
+            /* 🟢 在大螢幕時，讓按鈕群組佔滿整行，且兩個按鈕左右並排 */
+            .button-group {
+                flex-direction: row;
+                grid-column: 1 / -1; 
+            }
+            .btn-submit, .btn-link {
+                flex: 1; /* 讓兩個按鈕平均分配寬度 */
+            }
+            h2 { font-size: 1.5rem; }
+            body { margin: 20px; }
+            .container { padding: 25px; }
+        }
+
         .btn-delete {
             background-color: #dc3545;
             color: white;
@@ -198,7 +232,11 @@
                 <option value="已完成">已完成</option>
             </select>
         </div>
-        <button class="btn-submit" id="submitBtn">新增進度紀錄</button>
+        
+        <div class="button-group">
+            <button class="btn-submit" id="submitBtn">新增進度紀錄</button>
+            <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">聘工表填寫</a>
+        </div>
     </div>
 
     <table id="progressTable" class="display dt-responsive nowrap" style="width:100%">
