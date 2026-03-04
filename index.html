@@ -260,8 +260,8 @@
                     `<span class="editable" data-id="${docId}" data-field="targetWorker">${data.targetWorker || "無"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker">${data.confirmedWorker || "尚未確定"}</span>`,
-                    // 🟢 移除了 class="editable"，這格現在純粹顯示文字，無法雙擊修改了
-                    `<span data-id="${docId}" data-field="confirmedWorkerId">${data.confirmedWorkerId || ""}</span>`,
+                    // 🟢 重新加回 class="editable"，允許事後點兩下補填或修改編號
+                    `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId">${data.confirmedWorkerId || ""}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="formStatus">${data.formStatus || "未填寫"}</span>`,
                     formatDate(data.updatedAt),
                     actionBtn
@@ -340,6 +340,7 @@
             const rawVal = $(this).data('raw-val'); 
             inputHtml = `<input type="datetime-local" class="edit-input" value="${rawVal}">`;
         } else {
+            // 一般文字欄位 (包含 empName, targetWorker, confirmedWorkerId) 均可使用此輸入框修改
             inputHtml = `<input type="text" class="edit-input" value="${currentText}">`;
         }
 
