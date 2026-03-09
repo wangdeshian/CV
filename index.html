@@ -62,14 +62,15 @@
             font-weight: bold;
         }
 
-        /* 🟢 新增：重複工人的紅色警示標籤樣式 */
         .duplicate-worker {
-            color: #d32f2f; /* 醒目的深紅色 */
+            color: #d32f2f; 
             font-weight: bold;
-            background-color: #ffebee; /* 淡淡的紅底加強視覺 */
+            background-color: #ffebee; 
             padding: 2px 6px;
             border-radius: 4px;
             border: 1px solid #ffcdd2;
+            display: inline-block; /* 確保紅框標籤不會破版 */
+            margin-bottom: 2px;
         }
 
         .editable {
@@ -81,6 +82,7 @@
             border: 1px dashed transparent; 
             border-radius: 4px;
             transition: all 0.2s ease;
+            line-height: 1.6; /* 增加換行時的行距，更好閱讀 */
         }
         .editable:hover {
             border-color: #3498db;
@@ -304,7 +306,6 @@
         if(dataTable) {
             dataTable.clear(); 
             
-            // 🟢 第一階段：統計所有「想看的工人」出現的次數
             let workerFrequency = {};
             let allDocsData = [];
 
@@ -314,7 +315,6 @@
                 allDocsData.push(data);
 
                 if (data.targetWorker) {
-                    // 使用正則表達式切開空白、英文逗號、中文逗號、頓號
                     const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
                     workers.forEach(w => {
                         workerFrequency[w] = (workerFrequency[w] || 0) + 1;
@@ -322,37 +322,39 @@
                 }
             });
 
-            // 🟢 第二階段：開始繪製表格，並標註紅字
             allDocsData.forEach((data) => {
                 const docId = data.id;
                 const actionBtn = `<button type="button" class="btn-delete" data-id="${docId}">刪除</button>`;
                 const isConfirmed = data.confirmedWorker === '已確定';
 
-                // 處理想看的工人呈現邏輯
+                // 🟢 處理「想看的工人」：每 3 個一組，並插入換行標籤 <br>
                 let displayTargetWorker = "無";
                 if (data.targetWorker && data.targetWorker.trim() !== "") {
-                    // 為了保留原本使用者輸入的符號格式，我們用相同的邏輯切開但不捨棄符號
-                    const parts = data.targetWorker.split(/([\s,，、]+)/);
-                    displayTargetWorker = parts.map(part => {
-                        // 如果是分隔符號或空白，直接原樣保留
-                        if (/^[\s,，、]+$/.test(part) || part === "") return part;
-                        // 如果該編號出現次數大於 1，加上紅色警告 class
-                        if (workerFrequency[part] > 1) {
-                            return `<span class="duplicate-worker">${part}</span>`;
-                        }
-                        return part;
-                    }).join('');
+                    // 先只萃取出乾淨的編號陣列
+                    const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
+                    let chunks = [];
+                    
+                    // 每 3 個編號切成一個小組
+                    for (let i = 0; i < workers.length; i += 3) {
+                        // 處理這 3 個編號（判斷是否要標紅字），並用「、」串接
+                        let chunkHtml = workers.slice(i, i + 3).map(w => {
+                            return (workerFrequency[w] > 1) ? `<span class="duplicate-worker">${w}</span>` : w;
+                        }).join('、');
+                        chunks.push(chunkHtml);
+                    }
+                    // 將所有小組用換行標籤 <br> 串接起來
+                    displayTargetWorker = chunks.join('<br>');
                 }
 
+                // 🟢 替所有欄位加上 data-raw-val，保護原始資料不被畫面的換行或紅字破壞
                 const rowNode = dataTable.row.add([
-                    `<span class="editable" data-id="${docId}" data-field="empName">${data.empName || ""}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="needRecommendation">${data.needRecommendation || "否"}</span>`,
-                    // 🟢 將處理過帶有紅字標籤的內容放入格子中
-                    `<span class="editable" data-id="${docId}" data-field="targetWorker">${displayTargetWorker}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
-                    `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker">${data.confirmedWorker || "尚未確定"}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId">${data.confirmedWorkerId || ""}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="formStatus">${data.formStatus || "未填寫"}</span>`,
+                    `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
+                    `<span class="editable" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
                     formatDate(data.updatedAt),
                     actionBtn
                 ]).node();
@@ -401,8 +403,10 @@
     $('#tableBody').on('dblclick', '.editable', function() {
         if ($(this).find('input, select').length > 0) return;
 
-        // 當點擊修改時，.text() 會自動忽略我們加入的紅字 <span> 標籤，完美取得純文字
-        const currentText = $(this).text();
+        // 🟢 優先讀取隱藏在 data-raw-val 裡的「最原始輸入資料」，忽略畫面上的換行或紅字
+        const rawVal = $(this).attr('data-raw-val');
+        const currentText = rawVal !== undefined ? rawVal : $(this).text();
+        
         const docId = $(this).data('id');
         const fieldName = $(this).data('field');
         const $cell = $(this);
@@ -429,12 +433,13 @@
                     <option value="已完成" ${currentText==='已完成'?'selected':''}>已完成</option>
                 </select>`;
         } else if (fieldName === 'videoTime') {
-            const rawVal = $(this).data('raw-val'); 
-            inputHtml = `<input type="datetime-local" class="edit-input" value="${rawVal}">`;
+            inputHtml = `<input type="datetime-local" class="edit-input" value="${currentText}">`;
         } else {
+            // 現在打開這裡，會看到你當初打的最原始字串，包含你自己打的空格或逗號
             inputHtml = `<input type="text" class="edit-input" value="${currentText}">`;
         }
 
+        // 把畫面替換成輸入框
         $cell.html(inputHtml);
         const $input = $cell.find('.edit-input');
         $input.focus();
@@ -451,20 +456,20 @@
 
             if (fieldName === 'empName' && newValue === "") {
                 alert("雇主姓名不能為空白！");
+                // 如果失敗，我們要恢復原本帶有 HTML 換行與紅字的畫面，不能只塞回純文字
+                // 所以直接強制重新整理這一列，交給 Firebase 快照來畫
                 $cell.html(currentText); 
                 return;
             }
 
             if (newValue === currentText.trim()) {
-                // 如果沒改變，但原本有包含紅字標籤，因為 currentText 被剝奪了 HTML，
-                // 這邊我們必須直接依賴 Firebase 自動刷新重新繪製，所以不做動作讓他空轉，等下個快照即可。
-                // 為了避免畫面短暫變成純文字，我們發動一次小更新觸發刷新：
-                if (fieldName === 'targetWorker') {
-                     // 對於會包含 HTML 的欄位，不直接寫回 currentText，強制讓它跑去儲存觸發刷新
-                } else {
-                    $cell.html(currentText);
-                    return;
-                }
+                // 如果資料沒改，一樣不能只塞回純文字，否則紅字跟換行會不見
+                // 最好的方法是直接讓它假裝存檔成功，讓 Firebase 觸發重新繪製
+                try {
+                    const docRef = doc(db, "hiring_progress", docId);
+                    await updateDoc(docRef, { updatedAt: serverTimestamp() });
+                } catch (e) {}
+                return;
             }
 
             try {
@@ -476,7 +481,6 @@
             } catch (error) {
                 console.error("更新錯誤：", error);
                 alert("修改失敗，請稍後再試！");
-                $cell.html(currentText); 
             }
         });
     });
