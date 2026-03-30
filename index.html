@@ -70,24 +70,14 @@
             background-color: #f9f9f9;
         }
 
-        /* 🟢 已確定的綠色樣式 */
-        .row-confirmed td {
-            background-color: #e8f5e9 !important; 
-        }
-        .status-confirmed {
-            color: #1b5e20;
-            font-weight: bold;
-        }
+        .row-confirmed td { background-color: #e8f5e9 !important; }
+        .status-confirmed { color: #1b5e20; font-weight: bold; }
 
-        /* 🟢 新增：暫停的灰色樣式 */
         .row-paused td {
-            background-color: #e9ecef !important; /* 淺灰色底 */
-            color: #6c757d !important; /* 文字變灰，增加停用感 */
+            background-color: #e9ecef !important;
+            color: #6c757d !important;
         }
-        .status-paused {
-            color: #495057;
-            font-weight: bold;
-        }
+        .status-paused { color: #495057; font-weight: bold; }
 
         .duplicate-worker {
             color: #d32f2f; 
@@ -143,6 +133,12 @@
             border-radius: 4px;
             font-size: 16px; 
         }
+        /* 🟢 新增：稍微調整上傳按鈕的樣式 */
+        .form-group input[type="file"] {
+            padding: 7px;
+            font-size: 14px;
+            background-color: #fff;
+        }
 
         .button-group {
             display: flex;
@@ -163,6 +159,7 @@
             width: 100%; 
         }
         .btn-submit:hover { background-color: #218838; }
+        .btn-submit:disabled { background-color: #6c757d; cursor: not-allowed; } /* 上傳中防呆樣式 */
 
         .btn-link {
             display: flex;
@@ -190,35 +187,11 @@
                 flex-direction: row;
                 grid-column: 1 / -1; 
             }
-            .btn-submit, .btn-link {
-                flex: 1; 
-            }
+            .btn-submit, .btn-link { flex: 1; }
             h2 { font-size: 1.5rem; }
             body { margin: 20px; }
             .container { padding: 25px; }
         }
-
-        .btn-delete {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn-delete:hover { background-color: #c82333; }
-
-        .btn-pause {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn-pause:hover { background-color: #5a6268; }
 
         .action-buttons {
             display: flex;
@@ -227,14 +200,26 @@
             align-items: center;
         }
 
-        .edit-input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 5px;
-            font-size: 14px;
-            border: 1px solid #007bff;
-            border-radius: 3px;
+        .btn-delete { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn-delete:hover { background-color: #c82333; }
+
+        .btn-pause { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn-pause:hover { background-color: #5a6268; }
+
+        /* 🟢 新增：查看檔案按鈕的樣式 */
+        .btn-view-file {
+            background-color: #17a2b8;
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            display: inline-block;
         }
+        .btn-view-file:hover { background-color: #138496; color: white; }
+
+        .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -251,7 +236,7 @@
             <label>請公司推薦</label>
             <select id="needRecommendation">
                 <option value="否">否</option>
-                <option value="是">Option 是</option>
+                <option value="是">是</option>
             </select>
         </div>
         <div class="form-group">
@@ -284,6 +269,11 @@
             </select>
         </div>
         
+        <div class="form-group">
+            <label>上傳聘工表 (選填)</label>
+            <input type="file" id="hiringDoc" accept=".pdf, image/*">
+        </div>
+        
         <div class="button-group">
             <button type="button" class="btn-submit" id="submitBtn">新增進度紀錄</button>
             <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">聘工表填寫</a>
@@ -302,6 +292,7 @@
                     <th>確工編號</th>
                     <th>聘工表狀態</th>
                     <th>最後更新時間</th>
+                    <th>附件</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -312,8 +303,10 @@
 </div>
 
 <script type="module">
+    // 🟢 新增：引入 Storage 儲存空間的功能模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAB-b45xKSpUg5I43NUxZtzjytj9p5Fu_A",
@@ -326,6 +319,8 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    // 🟢 新增：啟動 Storage 服務
+    const storage = getStorage(app); 
     const progressCol = collection(db, "hiring_progress"); 
 
     let dataTable;
@@ -373,7 +368,6 @@
             allDocsData.forEach((data) => {
                 const docId = data.id;
                 const isConfirmed = data.confirmedWorker === '已確定';
-                // 🟢 新增判斷：此案件狀態是否為「暫停」
                 const isPaused = data.formStatus === '暫停';
 
                 const actionBtn = `
@@ -382,6 +376,11 @@
                         <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
                     </div>
                 `;
+
+                // 🟢 新增：判斷這筆資料有沒有夾帶檔案，如果有就顯示「📄 查看」按鈕，沒有就顯示灰色的「無」
+                const attachmentHtml = data.fileUrl 
+                    ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 查看</a>`
+                    : `<span style="color: #bbb;">無</span>`;
 
                 let displayTargetWorker = "無";
                 if (data.targetWorker && data.targetWorker.trim() !== "") {
@@ -404,13 +403,13 @@
                     `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
-                    // 🟢 替狀態欄位加上粗體字判斷
                     `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
                     formatDate(data.updatedAt),
+                    // 🟢 新增：塞入剛剛做好的附件按鈕 HTML
+                    attachmentHtml,
                     actionBtn
                 ]).node();
 
-                // 🟢 狀態變色的邏輯分配 (暫停優先級大於已確定)
                 if (isPaused) {
                     $(rowNode).addClass('row-paused');
                 } else if (isConfirmed) {
@@ -426,6 +425,40 @@
         const empName = document.getElementById("empName").value.trim();
         if (empName === "") { alert("請至少輸入「雇主姓名」！"); return; }
 
+        const submitBtn = document.getElementById("submitBtn");
+        
+        // 🟢 新增：取得使用者選取的檔案
+        const fileInput = document.getElementById("hiringDoc");
+        const file = fileInput.files[0];
+        let downloadUrl = null;
+        let originalFileName = null;
+
+        // 🟢 新增：如果有選擇檔案，先執行上傳動作
+        if (file) {
+            // 防呆機制：上傳時按鈕反灰，避免使用者重複連點
+            submitBtn.disabled = true;
+            submitBtn.textContent = "檔案上傳中，請稍候...";
+
+            try {
+                // 為了避免檔名重複被覆蓋，我們在檔名前面加上一串時間戳記
+                const uniqueFilename = Date.now() + '_' + file.name;
+                const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
+                
+                // 執行上傳
+                await uploadBytes(storageRef, file);
+                
+                // 上傳完成後，取得該檔案的專屬網址
+                downloadUrl = await getDownloadURL(storageRef);
+                originalFileName = file.name;
+            } catch (error) {
+                console.error("檔案上傳失敗：", error);
+                alert("檔案上傳失敗！請檢查網路或稍後再試。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "新增進度紀錄";
+                return; // 上傳失敗就中斷，不要寫入資料庫
+            }
+        }
+
         const newRecord = {
             empName: empName,
             needRecommendation: document.getElementById("needRecommendation").value,
@@ -437,17 +470,33 @@
             updatedAt: serverTimestamp() 
         };
 
+        // 🟢 新增：如果剛剛有成功取得檔案網址，就把網址一起寫入這筆案件資料中
+        if (downloadUrl) {
+            newRecord.fileUrl = downloadUrl;
+            newRecord.fileName = originalFileName;
+        }
+
         try {
             await addDoc(progressCol, newRecord);
+            // 送出成功後，清空所有欄位
             document.getElementById("empName").value = "";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
             document.getElementById("confirmedWorkerId").value = ""; 
-        } catch (error) { console.error("寫入錯誤：", error); }
+            fileInput.value = ""; // 清空檔案選擇器
+            
+            // 恢復按鈕狀態
+            submitBtn.disabled = false;
+            submitBtn.textContent = "新增進度紀錄";
+        } catch (error) { 
+            console.error("寫入錯誤：", error); 
+            submitBtn.disabled = false;
+            submitBtn.textContent = "新增進度紀錄";
+        }
     });
 
     $('#tableBody').on('click', '.btn-delete', async function() {
-        if(confirm("確定要刪除這筆紀錄嗎？")) {
+        if(confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
             try { await deleteDoc(doc(db, "hiring_progress", docId)); } 
             catch (error) { console.error("刪除錯誤：", error); }
