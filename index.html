@@ -45,14 +45,10 @@
 
         .table-responsive table {
             width: 100% !important;
-            min-width: 1100px; 
+            min-width: 1200px; /* 稍微加寬以容納新欄位 */
         }
         
-        table.dataTable {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        
+        table.dataTable { border-collapse: collapse; width: 100%; }
         table.dataTable th, table.dataTable td {
             border: 1px solid #ddd;
             padding: 12px 8px;
@@ -60,164 +56,80 @@
             white-space: nowrap; 
             vertical-align: middle;
         }
-        
-        table.dataTable th {
-            background-color: #f1f5f9;
-            color: #333;
-            font-weight: bold;
-        }
-        table.dataTable tbody tr:hover {
-            background-color: #f9f9f9;
-        }
+        table.dataTable th { background-color: #f1f5f9; color: #333; font-weight: bold; }
+        table.dataTable tbody tr:hover { background-color: #f9f9f9; }
 
         .row-confirmed td { background-color: #e8f5e9 !important; }
         .status-confirmed { color: #1b5e20; font-weight: bold; }
 
-        .row-paused td {
-            background-color: #e9ecef !important;
-            color: #6c757d !important;
-        }
+        .row-paused td { background-color: #e9ecef !important; color: #6c757d !important; }
         .status-paused { color: #495057; font-weight: bold; }
 
         .duplicate-worker {
-            color: #d32f2f; 
-            font-weight: bold;
-            background-color: #ffebee; 
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid #ffcdd2;
-            display: inline-block;
-            margin-bottom: 2px;
+            color: #d32f2f; font-weight: bold; background-color: #ffebee; 
+            padding: 2px 6px; border-radius: 4px; border: 1px solid #ffcdd2;
+            display: inline-block; margin-bottom: 2px;
         }
 
         .editable {
-            display: block;          
-            min-height: 24px;        
-            min-width: 40px;         
-            cursor: pointer;         
-            padding: 2px;
-            border: 1px dashed transparent; 
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            line-height: 1.6;
+            display: block; min-height: 24px; min-width: 40px; cursor: pointer;         
+            padding: 2px; border: 1px dashed transparent; border-radius: 4px;
+            transition: all 0.2s ease; line-height: 1.6;
         }
-        .editable:hover {
-            border-color: #3498db;
-            background-color: #f0f8ff;
-        }
+        .editable:hover { border-color: #3498db; background-color: #f0f8ff; }
 
         .form-section {
-            background-color: #fdfdfd;
-            border: 1px solid #eee;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            display: grid;
-            grid-template-columns: 1fr; 
-            gap: 15px;
+            background-color: #fdfdfd; border: 1px solid #eee; padding: 15px;
+            margin-bottom: 20px; border-radius: 6px; display: grid;
+            grid-template-columns: 1fr; gap: 15px;
         }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group label {
-            font-size: 14px;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: bold;
-        }
-        .form-group input, .form-group select {
-            padding: 10px; 
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px; 
-        }
-        /* 🟢 新增：稍微調整上傳按鈕的樣式 */
-        .form-group input[type="file"] {
-            padding: 7px;
-            font-size: 14px;
-            background-color: #fff;
-        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        .form-group input[type="file"] { padding: 7px; font-size: 14px; background-color: #fff; }
 
-        .button-group {
-            display: flex;
-            flex-direction: column; 
-            gap: 10px;
-        }
-
+        .button-group { display: flex; flex-direction: column; gap: 10px; }
         .btn-submit {
-            padding: 12px 15px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: background 0.3s;
-            width: 100%; 
+            padding: 12px 15px; background-color: #28a745; color: white; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; 
         }
         .btn-submit:hover { background-color: #218838; }
-        .btn-submit:disabled { background-color: #6c757d; cursor: not-allowed; } /* 上傳中防呆樣式 */
+        .btn-submit:disabled { background-color: #6c757d; cursor: not-allowed; }
 
         .btn-link {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 15px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 16px;
-            transition: background 0.3s;
-            width: 100%; 
-            box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; padding: 12px 15px;
+            background-color: #007bff; color: white; text-decoration: none; border-radius: 4px;
+            font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box;
         }
         .btn-link:hover { background-color: #0056b3; }
 
         @media (min-width: 768px) {
-            .form-section {
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
-                align-items: end;
-            }
-            .button-group {
-                flex-direction: row;
-                grid-column: 1 / -1; 
-            }
+            .form-section { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+            .button-group { flex-direction: row; grid-column: 1 / -1; }
             .btn-submit, .btn-link { flex: 1; }
-            h2 { font-size: 1.5rem; }
-            body { margin: 20px; }
-            .container { padding: 25px; }
+            h2 { font-size: 1.5rem; } body { margin: 20px; } .container { padding: 25px; }
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 8px; 
-            justify-content: center;
-            align-items: center;
-        }
-
+        .action-buttons { display: flex; gap: 8px; justify-content: center; align-items: center; }
         .btn-delete { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-delete:hover { background-color: #c82333; }
-
         .btn-pause { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-pause:hover { background-color: #5a6268; }
 
-        /* 🟢 新增：查看檔案按鈕的樣式 */
+        /* 🟢 表格內的「下載檔案」按鈕樣式 */
         .btn-view-file {
-            background-color: #17a2b8;
-            color: white;
-            text-decoration: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: bold;
-            display: inline-block;
+            background-color: #17a2b8; color: white; text-decoration: none;
+            padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; display: inline-block;
         }
         .btn-view-file:hover { background-color: #138496; color: white; }
+
+        /* 🟢 表格內的「行內上傳」按鈕樣式 */
+        .btn-row-upload {
+            background-color: #f8f9fa; border: 1px solid #ced4da; color: #495057;
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; 
+            display: inline-block; transition: background-color 0.2s; font-weight: bold;
+        }
+        .btn-row-upload:hover { background-color: #e2e6ea; }
 
         .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
     </style>
@@ -259,6 +171,7 @@
             <label>確工編號</label>
             <input type="text" id="confirmedWorkerId" placeholder="輸入編號">
         </div>
+
         <div class="form-group">
             <label>聘工表狀態</label>
             <select id="formStatus">
@@ -268,7 +181,6 @@
                 <option value="已完成">已完成</option>
             </select>
         </div>
-        
         <div class="form-group">
             <label>上傳聘工表 (選填)</label>
             <input type="file" id="hiringDoc" accept=".pdf, image/*">
@@ -291,8 +203,9 @@
                     <th>確定工人</th>
                     <th>確工編號</th>
                     <th>聘工表狀態</th>
+                    <th>上傳檔案</th>
+                    <th>附件下載</th>
                     <th>最後更新時間</th>
-                    <th>附件</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -303,7 +216,6 @@
 </div>
 
 <script type="module">
-    // 🟢 新增：引入 Storage 儲存空間的功能模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
@@ -319,7 +231,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    // 🟢 新增：啟動 Storage 服務
     const storage = getStorage(app); 
     const progressCol = collection(db, "hiring_progress"); 
 
@@ -377,16 +288,25 @@
                     </div>
                 `;
 
-                // 🟢 新增：判斷這筆資料有沒有夾帶檔案，如果有就顯示「📄 查看」按鈕，沒有就顯示灰色的「無」
+                // 🟢 產生：單筆資料獨立的「上傳」按鈕。若已有檔案則顯示「重新上傳」
+                const uploadBtnId = `upload_${docId}`;
+                const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
+                const uploadHtml = `
+                    <label for="${uploadBtnId}" class="btn-row-upload">
+                        ${uploadText}
+                    </label>
+                    <input type="file" id="${uploadBtnId}" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
+                `;
+
+                // 🟢 產生：單筆資料獨立的「下載/查看」按鈕
                 const attachmentHtml = data.fileUrl 
-                    ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 查看</a>`
-                    : `<span style="color: #bbb;">無</span>`;
+                    ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 點擊下載/查看</a>`
+                    : `<span style="color: #bbb;">無檔案</span>`;
 
                 let displayTargetWorker = "無";
                 if (data.targetWorker && data.targetWorker.trim() !== "") {
                     const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
                     let chunks = [];
-                    
                     for (let i = 0; i < workers.length; i += 3) {
                         let chunkHtml = workers.slice(i, i + 3).map(w => {
                             return (workerFrequency[w] > 1) ? `<span class="duplicate-worker">${w}</span>` : w;
@@ -396,6 +316,7 @@
                     displayTargetWorker = chunks.join('<br>');
                 }
 
+                // 依序將三個關聯欄位排在一起
                 const rowNode = dataTable.row.add([
                     `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
@@ -404,9 +325,9 @@
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
                     `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
+                    uploadHtml,      // 緊鄰狀態：上傳按鈕
+                    attachmentHtml,  // 緊鄰上傳：下載按鈕
                     formatDate(data.updatedAt),
-                    // 🟢 新增：塞入剛剛做好的附件按鈕 HTML
-                    attachmentHtml,
                     actionBtn
                 ]).node();
 
@@ -420,34 +341,28 @@
         }
     });
 
+    // -----------------------------------------
+    // 邏輯 1：從上方新增表單「首次上傳」檔案
+    // -----------------------------------------
     document.getElementById("submitBtn").addEventListener("click", async (e) => {
         e.preventDefault(); 
         const empName = document.getElementById("empName").value.trim();
         if (empName === "") { alert("請至少輸入「雇主姓名」！"); return; }
 
         const submitBtn = document.getElementById("submitBtn");
-        
-        // 🟢 新增：取得使用者選取的檔案
         const fileInput = document.getElementById("hiringDoc");
         const file = fileInput.files[0];
         let downloadUrl = null;
         let originalFileName = null;
 
-        // 🟢 新增：如果有選擇檔案，先執行上傳動作
         if (file) {
-            // 防呆機制：上傳時按鈕反灰，避免使用者重複連點
             submitBtn.disabled = true;
             submitBtn.textContent = "檔案上傳中，請稍候...";
 
             try {
-                // 為了避免檔名重複被覆蓋，我們在檔名前面加上一串時間戳記
                 const uniqueFilename = Date.now() + '_' + file.name;
                 const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
-                
-                // 執行上傳
                 await uploadBytes(storageRef, file);
-                
-                // 上傳完成後，取得該檔案的專屬網址
                 downloadUrl = await getDownloadURL(storageRef);
                 originalFileName = file.name;
             } catch (error) {
@@ -455,7 +370,7 @@
                 alert("檔案上傳失敗！請檢查網路或稍後再試。");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "新增進度紀錄";
-                return; // 上傳失敗就中斷，不要寫入資料庫
+                return; 
             }
         }
 
@@ -470,7 +385,6 @@
             updatedAt: serverTimestamp() 
         };
 
-        // 🟢 新增：如果剛剛有成功取得檔案網址，就把網址一起寫入這筆案件資料中
         if (downloadUrl) {
             newRecord.fileUrl = downloadUrl;
             newRecord.fileName = originalFileName;
@@ -478,14 +392,12 @@
 
         try {
             await addDoc(progressCol, newRecord);
-            // 送出成功後，清空所有欄位
             document.getElementById("empName").value = "";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
             document.getElementById("confirmedWorkerId").value = ""; 
-            fileInput.value = ""; // 清空檔案選擇器
+            fileInput.value = ""; 
             
-            // 恢復按鈕狀態
             submitBtn.disabled = false;
             submitBtn.textContent = "新增進度紀錄";
         } catch (error) { 
@@ -495,6 +407,49 @@
         }
     });
 
+    // -----------------------------------------
+    // 邏輯 2：在表格清單內針對現有案件「後續補充上傳」
+    // -----------------------------------------
+    $('#tableBody').on('change', '.row-file-input', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return; // 取消選取就不動作
+        
+        const docId = $(this).data('id');
+        const $label = $(this).siblings('label');
+        const originalText = $label.text();
+        
+        // 變更按鈕文字為上傳中，並禁止重複點擊
+        $label.text('⏳ 上傳中...').css('pointer-events', 'none');
+
+        try {
+            // 步驟 A：將檔案傳上 Storage
+            const uniqueFilename = Date.now() + '_' + file.name;
+            const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
+            await uploadBytes(storageRef, file);
+            const downloadUrl = await getDownloadURL(storageRef);
+
+            // 步驟 B：將網址更新回 Firestore 對應的案件中
+            const docRef = doc(db, "hiring_progress", docId);
+            await updateDoc(docRef, { 
+                fileUrl: downloadUrl,
+                fileName: file.name,
+                updatedAt: serverTimestamp() 
+            });
+            
+            // 💡 更新成功後，Firebase 的 onSnapshot 會自動幫我們重新繪製這行，按鈕也會自動變回正常狀態！
+        } catch (error) {
+            console.error("行內上傳失敗：", error);
+            alert("檔案上傳失敗！請檢查網路或稍後再試。");
+            $label.text(originalText).css('pointer-events', 'auto');
+        }
+        
+        // 清除 input，確保下次選同一個檔案也能觸發 change 事件
+        $(this).val('');
+    });
+
+    // -----------------------------------------
+    // 其他按鈕與編輯邏輯 (維持原樣)
+    // -----------------------------------------
     $('#tableBody').on('click', '.btn-delete', async function() {
         if(confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
@@ -508,15 +463,8 @@
             const docId = $(this).data('id');
             try { 
                 const docRef = doc(db, "hiring_progress", docId);
-                await updateDoc(docRef, { 
-                    formStatus: "暫停",
-                    updatedAt: serverTimestamp() 
-                });
-            } 
-            catch (error) { 
-                console.error("暫停錯誤：", error);
-                alert("狀態更新失敗，請稍後再試！");
-            }
+                await updateDoc(docRef, { formStatus: "暫停", updatedAt: serverTimestamp() });
+            } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
         }
     });
 
@@ -525,7 +473,6 @@
 
         const rawVal = $(this).attr('data-raw-val');
         const currentText = rawVal !== undefined ? rawVal : $(this).text();
-        
         const docId = $(this).data('id');
         const fieldName = $(this).data('field');
         const $cell = $(this);
