@@ -45,7 +45,7 @@
 
         .table-responsive table {
             width: 100% !important;
-            min-width: 1200px; /* 稍微加寬以容納新欄位 */
+            min-width: 1200px; 
         }
         
         table.dataTable { border-collapse: collapse; width: 100%; }
@@ -82,16 +82,26 @@
             background-color: #fdfdfd; border: 1px solid #eee; padding: 15px;
             margin-bottom: 20px; border-radius: 6px; display: grid;
             grid-template-columns: 1fr; gap: 15px;
+            box-sizing: border-box;
         }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
-        .form-group input, .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        .form-group input[type="file"] { padding: 7px; font-size: 14px; background-color: #fff; }
+        
+        /* 🟢 修正 1：加入 width: 100% 與 box-sizing 解決手機版輸入框溢出的問題 */
+        .form-group input, .form-group select { 
+            padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; 
+            width: 100%; box-sizing: border-box; 
+        }
+        .form-group input[type="file"] { 
+            padding: 7px; font-size: 14px; background-color: #fff; 
+            width: 100%; box-sizing: border-box; 
+        }
 
         .button-group { display: flex; flex-direction: column; gap: 10px; }
         .btn-submit {
             padding: 12px 15px; background-color: #28a745; color: white; border: none;
             border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; 
+            box-sizing: border-box;
         }
         .btn-submit:hover { background-color: #218838; }
         .btn-submit:disabled { background-color: #6c757d; cursor: not-allowed; }
@@ -116,14 +126,12 @@
         .btn-pause { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-pause:hover { background-color: #5a6268; }
 
-        /* 🟢 表格內的「下載檔案」按鈕樣式 */
         .btn-view-file {
             background-color: #17a2b8; color: white; text-decoration: none;
             padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; display: inline-block;
         }
         .btn-view-file:hover { background-color: #138496; color: white; }
 
-        /* 🟢 表格內的「行內上傳」按鈕樣式 */
         .btn-row-upload {
             background-color: #f8f9fa; border: 1px solid #ced4da; color: #495057;
             padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; 
@@ -255,18 +263,21 @@
         return timeString.replace("T", " ");
     }
 
+    // 🟢 修正 2：建立一個陣列來「快取記憶」資料的排序位置，防止修改後亂跳
+    let stableOrderCache = [];
+
     const q = query(progressCol, orderBy("updatedAt", "desc"));
     onSnapshot(q, (snapshot) => {
         if(dataTable) {
-            dataTable.clear(); 
-            
             let workerFrequency = {};
             let allDocsData = [];
+            let currentSnapshotIds = [];
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 data.id = docSnap.id;
                 allDocsData.push(data);
+                currentSnapshotIds.push(data.id);
 
                 if (data.targetWorker) {
                     const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
@@ -276,6 +287,17 @@
                 }
             });
 
+            // 🟢 鎖定順序的核心邏輯：
+            // 找出全新建立的案件（不在我們記憶清單裡的）
+            let newIds = currentSnapshotIds.filter(id => !stableOrderCache.includes(id));
+            // 把新案件插在最前面，舊案件維持原本記憶的順序
+            stableOrderCache = [...newIds, ...stableOrderCache];
+
+            // 根據記憶清單的順序，重新整理要顯示的資料陣列
+            allDocsData.sort((a, b) => stableOrderCache.indexOf(a.id) - stableOrderCache.indexOf(b.id));
+
+            // 清空並重新繪製表格
+            dataTable.clear(); 
             allDocsData.forEach((data) => {
                 const docId = data.id;
                 const isConfirmed = data.confirmedWorker === '已確定';
@@ -288,7 +310,6 @@
                     </div>
                 `;
 
-                // 🟢 產生：單筆資料獨立的「上傳」按鈕。若已有檔案則顯示「重新上傳」
                 const uploadBtnId = `upload_${docId}`;
                 const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
                 const uploadHtml = `
@@ -298,7 +319,6 @@
                     <input type="file" id="${uploadBtnId}" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
                 `;
 
-                // 🟢 產生：單筆資料獨立的「下載/查看」按鈕
                 const attachmentHtml = data.fileUrl 
                     ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 點擊下載/查看</a>`
                     : `<span style="color: #bbb;">無檔案</span>`;
@@ -316,7 +336,6 @@
                     displayTargetWorker = chunks.join('<br>');
                 }
 
-                // 依序將三個關聯欄位排在一起
                 const rowNode = dataTable.row.add([
                     `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
@@ -325,8 +344,8 @@
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
                     `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
-                    uploadHtml,      // 緊鄰狀態：上傳按鈕
-                    attachmentHtml,  // 緊鄰上傳：下載按鈕
+                    uploadHtml,      
+                    attachmentHtml,  
                     formatDate(data.updatedAt),
                     actionBtn
                 ]).node();
@@ -341,9 +360,7 @@
         }
     });
 
-    // -----------------------------------------
-    // 邏輯 1：從上方新增表單「首次上傳」檔案
-    // -----------------------------------------
+    // --- 上方新增表單上傳邏輯 ---
     document.getElementById("submitBtn").addEventListener("click", async (e) => {
         e.preventDefault(); 
         const empName = document.getElementById("empName").value.trim();
@@ -407,49 +424,39 @@
         }
     });
 
-    // -----------------------------------------
-    // 邏輯 2：在表格清單內針對現有案件「後續補充上傳」
-    // -----------------------------------------
+    // --- 表格清單內後續上傳邏輯 ---
     $('#tableBody').on('change', '.row-file-input', async function(e) {
         const file = e.target.files[0];
-        if (!file) return; // 取消選取就不動作
+        if (!file) return; 
         
         const docId = $(this).data('id');
         const $label = $(this).siblings('label');
         const originalText = $label.text();
         
-        // 變更按鈕文字為上傳中，並禁止重複點擊
         $label.text('⏳ 上傳中...').css('pointer-events', 'none');
 
         try {
-            // 步驟 A：將檔案傳上 Storage
             const uniqueFilename = Date.now() + '_' + file.name;
             const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
             await uploadBytes(storageRef, file);
             const downloadUrl = await getDownloadURL(storageRef);
 
-            // 步驟 B：將網址更新回 Firestore 對應的案件中
             const docRef = doc(db, "hiring_progress", docId);
             await updateDoc(docRef, { 
                 fileUrl: downloadUrl,
                 fileName: file.name,
                 updatedAt: serverTimestamp() 
             });
-            
-            // 💡 更新成功後，Firebase 的 onSnapshot 會自動幫我們重新繪製這行，按鈕也會自動變回正常狀態！
+            // 狀態已鎖定位置，重新繪製時按鈕與下載連結會自動更新，且列不會跳動！
         } catch (error) {
             console.error("行內上傳失敗：", error);
             alert("檔案上傳失敗！請檢查網路或稍後再試。");
             $label.text(originalText).css('pointer-events', 'auto');
         }
-        
-        // 清除 input，確保下次選同一個檔案也能觸發 change 事件
         $(this).val('');
     });
 
-    // -----------------------------------------
-    // 其他按鈕與編輯邏輯 (維持原樣)
-    // -----------------------------------------
+    // --- 其他按鈕與編輯邏輯 ---
     $('#tableBody').on('click', '.btn-delete', async function() {
         if(confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
