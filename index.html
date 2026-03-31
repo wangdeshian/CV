@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
     
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
@@ -138,6 +139,23 @@
         .btn-row-upload:hover { background-color: #e2e6ea; }
 
         .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
+
+        /* 🟢 新增：拖曳把手的專屬樣式 */
+        .drag-handle {
+            cursor: grab;
+            font-size: 20px;
+            color: #adb5bd;
+            display: inline-block;
+            width: 100%;
+        }
+        .drag-handle:active { cursor: grabbing; color: #495057; }
+        
+        /* 拖曳時整列的半透明浮動視覺效果 */
+        .ui-sortable-helper {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            display: table;
+        }
     </style>
 </head>
 <body>
@@ -202,6 +220,7 @@
         <table id="progressTable" class="display nowrap" style="width:100%">
             <thead>
                 <tr>
+                    <th style="width: 40px;">順序</th>
                     <th>雇主姓名</th>
                     <th>請公司推薦</th>
                     <th>想看的工人</th>
@@ -245,8 +264,47 @@
         dataTable = $('#progressTable').DataTable({
             responsive: false, 
             language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' },
-            pageLength: 25,
+            pageLength: 50, // 增加單頁顯示數量方便拖曳
             ordering: false 
+        });
+
+        // 🟢 啟動 jQuery UI 的拖曳排序功能
+        $('#tableBody').sortable({
+            handle: '.drag-handle', // 指定只有按住 ☰ 才能拖曳
+            axis: 'y', // 限制只能上下拖動
+            update: async function(event, ui) {
+                const $row = ui.item;
+                const docId = $row.find('.drag-handle').data('id');
+                
+                // 取得被拖曳列的「上一列」與「下一列」的權重分數
+                const $prev = $row.prev();
+                const $next = $row.next();
+                
+                let prevOrder = $prev.length ? parseFloat($prev.find('.drag-handle').data('order')) : null;
+                let nextOrder = $next.length ? parseFloat($next.find('.drag-handle').data('order')) : null;
+                
+                let newSortOrder = 0;
+
+                // 核心運算：把新位置的上下分數相加除以二
+                if (prevOrder !== null && nextOrder !== null) {
+                    newSortOrder = (prevOrder + nextOrder) / 2;
+                } else if (prevOrder !== null) {
+                    // 拖到最後一名
+                    newSortOrder = prevOrder - 10000; 
+                } else if (nextOrder !== null) {
+                    // 拖到第一名
+                    newSortOrder = nextOrder + 10000; 
+                }
+
+                try {
+                    // 將算出的新權重寫入資料庫，永久鎖定順序！
+                    const docRef = doc(db, "hiring_progress", docId);
+                    await updateDoc(docRef, { sortOrder: newSortOrder });
+                } catch (error) {
+                    console.error("更新排序失敗：", error);
+                    alert("排序更新失敗，請檢查網路狀態！");
+                }
+            }
         });
     });
 
@@ -261,7 +319,6 @@
         return timeString.replace("T", " ");
     }
 
-    // 🟢 修正：不再依賴 orderBy("updatedAt")，單純把所有資料抓下來
     const q = query(progressCol);
     
     onSnapshot(q, (snapshot) => {
@@ -272,6 +329,16 @@
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 data.id = docSnap.id;
+
+                // 🟢 舊資料自動補齊排序權重 (sortOrder) 機制
+                if (!data.sortOrder) {
+                    // 如果這筆資料以前沒存過排序權重，我們拿它的時間戳記轉成數字當作初始權重
+                    let fallbackOrder = data.createdAt ? data.createdAt.toMillis() : (data.updatedAt ? data.updatedAt.toMillis() : Date.now());
+                    const docRef = doc(db, "hiring_progress", data.id);
+                    updateDoc(docRef, { sortOrder: fallbackOrder }).catch(err => console.log(err));
+                    data.sortOrder = fallbackOrder;
+                }
+
                 allDocsData.push(data);
 
                 if (data.targetWorker) {
@@ -282,21 +349,17 @@
                 }
             });
 
-            // 🟢 終極排序邏輯：我們自己用程式幫資料按照「創立時間」排序
-            allDocsData.sort((a, b) => {
-                // 為了保護舊資料：如果有 createdAt 就用它，沒有的話就拿 updatedAt 墊檔當創立時間
-                let timeA = a.createdAt ? a.createdAt.toMillis() : (a.updatedAt ? a.updatedAt.toMillis() : 0);
-                let timeB = b.createdAt ? b.createdAt.toMillis() : (b.updatedAt ? b.updatedAt.toMillis() : 0);
-                
-                // 降冪排序 (數字大的也就是最新的，排在最上面)
-                return timeB - timeA;
-            });
+            // 🟢 徹底改用我們自訂的 sortOrder 權重來排序！(由大到小)
+            allDocsData.sort((a, b) => b.sortOrder - a.sortOrder);
 
             dataTable.clear(); 
             allDocsData.forEach((data) => {
                 const docId = data.id;
                 const isConfirmed = data.confirmedWorker === '已確定';
                 const isPaused = data.formStatus === '暫停';
+
+                // 🟢 產生拖曳把手，並將它的權重分數綁在上面供拖曳時計算
+                const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按住拖曳可調整順序">☰</span>`;
 
                 const actionBtn = `
                     <div class="action-buttons">
@@ -332,6 +395,7 @@
                 }
 
                 const rowNode = dataTable.row.add([
+                    dragHandleHtml, // 第一欄放入拖曳把手
                     `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
@@ -341,7 +405,7 @@
                     `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
                     uploadHtml,      
                     attachmentHtml,  
-                    formatDate(data.updatedAt), // 畫面依然顯示「最後更新時間」讓您知道案件進度
+                    formatDate(data.updatedAt),
                     actionBtn
                 ]).node();
 
@@ -352,10 +416,11 @@
                 }
             });
             dataTable.draw(false); 
+            // 重繪完成後，更新拖曳套件確保它綁定最新的畫面
+            $('#tableBody').sortable('refresh');
         }
     });
 
-    // --- 上方新增表單上傳邏輯 ---
     document.getElementById("submitBtn").addEventListener("click", async (e) => {
         e.preventDefault(); 
         const empName = document.getElementById("empName").value.trim();
@@ -394,10 +459,10 @@
             confirmedWorker: document.getElementById("confirmedWorker").value,
             confirmedWorkerId: document.getElementById("confirmedWorkerId").value.trim(),
             formStatus: document.getElementById("formStatus").value,
-            
-            // 🟢 寫入時，同步寫入兩個時間
-            createdAt: serverTimestamp(), // 永遠不變的排序基準
-            updatedAt: serverTimestamp()  // 會隨時變動的顯示基準
+            // 🟢 新增案件時，賦予它當下時間作為最大權重，保證它出生在第一列
+            sortOrder: Date.now(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp() 
         };
 
         if (downloadUrl) {
@@ -422,7 +487,6 @@
         }
     });
 
-    // --- 表格清單內後續上傳邏輯 ---
     $('#tableBody').on('change', '.row-file-input', async function(e) {
         const file = e.target.files[0];
         if (!file) return; 
@@ -440,8 +504,7 @@
             const downloadUrl = await getDownloadURL(storageRef);
 
             const docRef = doc(db, "hiring_progress", docId);
-            
-            // 🟢 注意：這裡我們「只更新 updatedAt」，不去動 createdAt
+            // 🟢 行內修改：不再更動排序相關欄位，所以絕對不會跳走
             await updateDoc(docRef, { 
                 fileUrl: downloadUrl,
                 fileName: file.name,
@@ -455,7 +518,6 @@
         $(this).val('');
     });
 
-    // --- 其他按鈕與編輯邏輯 ---
     $('#tableBody').on('click', '.btn-delete', async function() {
         if(confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
@@ -469,7 +531,6 @@
             const docId = $(this).data('id');
             try { 
                 const docRef = doc(db, "hiring_progress", docId);
-                // 🟢 一樣只更新 updatedAt
                 await updateDoc(docRef, { formStatus: "暫停", updatedAt: serverTimestamp() });
             } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
         }
@@ -544,7 +605,7 @@
                 const docRef = doc(db, "hiring_progress", docId);
                 const updateData = {};
                 updateData[fieldName] = newValue;
-                updateData['updatedAt'] = serverTimestamp(); // 🟢 雙擊修改只變更更新時間
+                updateData['updatedAt'] = serverTimestamp(); 
                 await updateDoc(docRef, updateData);
             } catch (error) {
                 console.error("更新錯誤：", error);
