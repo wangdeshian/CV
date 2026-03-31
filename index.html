@@ -81,13 +81,11 @@
         .form-section {
             background-color: #fdfdfd; border: 1px solid #eee; padding: 15px;
             margin-bottom: 20px; border-radius: 6px; display: grid;
-            grid-template-columns: 1fr; gap: 15px;
-            box-sizing: border-box;
+            grid-template-columns: 1fr; gap: 15px; box-sizing: border-box; 
         }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
         
-        /* 🟢 修正 1：加入 width: 100% 與 box-sizing 解決手機版輸入框溢出的問題 */
         .form-group input, .form-group select { 
             padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; 
             width: 100%; box-sizing: border-box; 
@@ -225,7 +223,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -263,21 +261,18 @@
         return timeString.replace("T", " ");
     }
 
-    // 🟢 修正 2：建立一個陣列來「快取記憶」資料的排序位置，防止修改後亂跳
-    let stableOrderCache = [];
-
-    const q = query(progressCol, orderBy("updatedAt", "desc"));
+    // 🟢 修正：不再依賴 orderBy("updatedAt")，單純把所有資料抓下來
+    const q = query(progressCol);
+    
     onSnapshot(q, (snapshot) => {
         if(dataTable) {
             let workerFrequency = {};
             let allDocsData = [];
-            let currentSnapshotIds = [];
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 data.id = docSnap.id;
                 allDocsData.push(data);
-                currentSnapshotIds.push(data.id);
 
                 if (data.targetWorker) {
                     const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
@@ -287,16 +282,16 @@
                 }
             });
 
-            // 🟢 鎖定順序的核心邏輯：
-            // 找出全新建立的案件（不在我們記憶清單裡的）
-            let newIds = currentSnapshotIds.filter(id => !stableOrderCache.includes(id));
-            // 把新案件插在最前面，舊案件維持原本記憶的順序
-            stableOrderCache = [...newIds, ...stableOrderCache];
+            // 🟢 終極排序邏輯：我們自己用程式幫資料按照「創立時間」排序
+            allDocsData.sort((a, b) => {
+                // 為了保護舊資料：如果有 createdAt 就用它，沒有的話就拿 updatedAt 墊檔當創立時間
+                let timeA = a.createdAt ? a.createdAt.toMillis() : (a.updatedAt ? a.updatedAt.toMillis() : 0);
+                let timeB = b.createdAt ? b.createdAt.toMillis() : (b.updatedAt ? b.updatedAt.toMillis() : 0);
+                
+                // 降冪排序 (數字大的也就是最新的，排在最上面)
+                return timeB - timeA;
+            });
 
-            // 根據記憶清單的順序，重新整理要顯示的資料陣列
-            allDocsData.sort((a, b) => stableOrderCache.indexOf(a.id) - stableOrderCache.indexOf(b.id));
-
-            // 清空並重新繪製表格
             dataTable.clear(); 
             allDocsData.forEach((data) => {
                 const docId = data.id;
@@ -346,7 +341,7 @@
                     `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
                     uploadHtml,      
                     attachmentHtml,  
-                    formatDate(data.updatedAt),
+                    formatDate(data.updatedAt), // 畫面依然顯示「最後更新時間」讓您知道案件進度
                     actionBtn
                 ]).node();
 
@@ -399,7 +394,10 @@
             confirmedWorker: document.getElementById("confirmedWorker").value,
             confirmedWorkerId: document.getElementById("confirmedWorkerId").value.trim(),
             formStatus: document.getElementById("formStatus").value,
-            updatedAt: serverTimestamp() 
+            
+            // 🟢 寫入時，同步寫入兩個時間
+            createdAt: serverTimestamp(), // 永遠不變的排序基準
+            updatedAt: serverTimestamp()  // 會隨時變動的顯示基準
         };
 
         if (downloadUrl) {
@@ -442,12 +440,13 @@
             const downloadUrl = await getDownloadURL(storageRef);
 
             const docRef = doc(db, "hiring_progress", docId);
+            
+            // 🟢 注意：這裡我們「只更新 updatedAt」，不去動 createdAt
             await updateDoc(docRef, { 
                 fileUrl: downloadUrl,
                 fileName: file.name,
                 updatedAt: serverTimestamp() 
             });
-            // 狀態已鎖定位置，重新繪製時按鈕與下載連結會自動更新，且列不會跳動！
         } catch (error) {
             console.error("行內上傳失敗：", error);
             alert("檔案上傳失敗！請檢查網路或稍後再試。");
@@ -470,6 +469,7 @@
             const docId = $(this).data('id');
             try { 
                 const docRef = doc(db, "hiring_progress", docId);
+                // 🟢 一樣只更新 updatedAt
                 await updateDoc(docRef, { formStatus: "暫停", updatedAt: serverTimestamp() });
             } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
         }
@@ -544,7 +544,7 @@
                 const docRef = doc(db, "hiring_progress", docId);
                 const updateData = {};
                 updateData[fieldName] = newValue;
-                updateData['updatedAt'] = serverTimestamp(); 
+                updateData['updatedAt'] = serverTimestamp(); // 🟢 雙擊修改只變更更新時間
                 await updateDoc(docRef, updateData);
             } catch (error) {
                 console.error("更新錯誤：", error);
