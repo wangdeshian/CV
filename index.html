@@ -4,51 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>得賢引才 - 案件進度追蹤表</title>
-    
+
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-    
+
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-
     <style>
         body {
             font-family: "微軟正黑體", sans-serif;
             background-color: #f8f9fa;
-            margin: 10px; 
+            margin: 10px;
         }
         .container {
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            padding: 15px; 
+            padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            box-sizing: border-box; 
+            box-sizing: border-box;
         }
         h2 {
             color: #2c3e50;
             border-bottom: 2px solid #3498db;
             padding-bottom: 10px;
             margin-bottom: 15px;
-            font-size: 1.2rem; 
+            font-size: 1.2rem;
         }
-
         .table-responsive {
             width: 100%;
             overflow-x: visible;
             margin-top: 15px;
         }
-
         .table-responsive table {
             width: 100% !important;
             min-width: 0;
             table-layout: auto;
         }
-        
+
         table.dataTable { border-collapse: collapse; width: 100%; }
         table.dataTable th, table.dataTable td {
             border: 1px solid #ddd;
@@ -61,87 +58,72 @@
         }
         table.dataTable th { background-color: #f1f5f9; color: #333; font-weight: bold; }
         table.dataTable tbody tr:hover { background-color: #f9f9f9; }
-
         .row-confirmed td { background-color: #e8f5e9 !important; }
         .status-confirmed { color: #1b5e20; font-weight: bold; }
-
-        .row-completed td {
-            background-color: #e0f7f3 !important;
-            border-top-color: #8dd8cb !important;
-            border-bottom-color: #8dd8cb !important;
-        }
+        .row-completed td { background-color: #e0f7f3 !important; border-top-color: #8dd8cb !important; border-bottom-color: #8dd8cb !important; }
         .row-completed td:first-child { border-left: 5px solid #0f766e !important; }
         .status-completed { color: #0f766e; font-weight: bold; }
         .completed-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            background-color: #0f766e;
-            color: #fff;
-            border-radius: 999px;
-            padding: 3px 9px;
-            font-weight: bold;
-            line-height: 1.4;
-            white-space: nowrap;
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+            background-color: #0f766e; color: #fff; border-radius: 999px;
+            padding: 3px 9px; font-weight: bold; line-height: 1.4; white-space: nowrap;
         }
-
         .row-paused td { background-color: #e9ecef !important; color: #6c757d !important; }
         .status-paused { color: #495057; font-weight: bold; }
-
+        /* ✅ 已引進（已封存）列的樣式 */
+        .row-archived td {
+            background-color: #f1f3f5 !important;
+            color: #868e96 !important;
+            text-decoration: line-through;
+            opacity: 0.75;
+        }
+        .row-archived td:first-child { border-left: 4px solid #adb5bd !important; }
         .duplicate-worker {
-            color: #d32f2f; font-weight: bold; background-color: #ffebee; 
+            color: #d32f2f; font-weight: bold; background-color: #ffebee;
             padding: 2px 6px; border-radius: 4px; border: 1px solid #ffcdd2;
             display: inline-block; margin-bottom: 2px;
         }
-
         .editable {
-            display: block; min-height: 24px; min-width: 40px; cursor: pointer;         
+            display: block; min-height: 24px; min-width: 40px; cursor: pointer;
             padding: 2px; border: 1px dashed transparent; border-radius: 4px;
             transition: all 0.2s ease; line-height: 1.6;
         }
         .editable:hover { border-color: #3498db; background-color: #f0f8ff; }
-
         .form-section {
             background-color: #fdfdfd; border: 1px solid #eee; padding: 15px;
             margin-bottom: 20px; border-radius: 6px; display: grid;
-            grid-template-columns: 1fr; gap: 15px; box-sizing: border-box; 
+            grid-template-columns: 1fr; gap: 15px; box-sizing: border-box;
         }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 14px; margin-bottom: 5px; color: #555; font-weight: bold; }
-        
-        .form-group input, .form-group select { 
-            padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; 
-            width: 100%; box-sizing: border-box; 
+        .form-group input, .form-group select {
+            padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;
+            width: 100%; box-sizing: border-box;
         }
-        .form-group input[type="file"] { 
-            padding: 7px; font-size: 14px; background-color: #fff; 
-            width: 100%; box-sizing: border-box; 
+        .form-group input[type="file"] {
+            padding: 7px; font-size: 14px; background-color: #fff;
+            width: 100%; box-sizing: border-box;
         }
-
         .button-group { display: flex; flex-direction: column; gap: 10px; }
         .btn-submit {
             padding: 12px 15px; background-color: #28a745; color: white; border: none;
-            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%;
             box-sizing: border-box;
         }
         .btn-submit:hover { background-color: #218838; }
         .btn-submit:disabled { background-color: #6c757d; cursor: not-allowed; }
-
         .btn-link {
             display: flex; align-items: center; justify-content: center; padding: 12px 15px;
             background-color: #007bff; color: white; text-decoration: none; border-radius: 4px;
             font-weight: bold; font-size: 16px; width: 100%; box-sizing: border-box;
         }
         .btn-link:hover { background-color: #0056b3; }
-
         @media (min-width: 768px) {
             .form-section { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
             .button-group { flex-direction: row; grid-column: 1 / -1; }
             .btn-submit, .btn-link { flex: 1; }
             h2 { font-size: 1.5rem; } body { margin: 20px; } .container { padding: 25px; }
         }
-
         .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
         .btn-delete { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-delete:hover { background-color: #c82333; }
@@ -149,86 +131,69 @@
         .btn-pause:hover { background-color: #5a6268; }
         .btn-complete { background-color: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-complete:hover { background-color: #0b5f59; }
-        .btn-complete:disabled { background-color: #94a3b8; cursor: default; }
-
+        /* ✅ 已引進案件的「復原」按鈕 */
+        .btn-unarchive { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn-unarchive:hover { background-color: #5a6268; }
         .btn-view-file {
             background-color: #17a2b8; color: white; text-decoration: none;
             padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; display: inline-block;
         }
         .btn-view-file:hover { background-color: #138496; color: white; }
-
         .btn-row-upload {
             background-color: #f8f9fa; border: 1px solid #ced4da; color: #495057;
-            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; 
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;
             display: inline-block; transition: background-color 0.2s; font-weight: bold;
         }
         .btn-row-upload:hover { background-color: #e2e6ea; }
-
         .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
-
+        /* ✅ 切換顯示已引進案件的工具列 */
+        .archive-toolbar {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 10px; flex-wrap: wrap;
+        }
+        .btn-toggle-archive {
+            background-color: #e9ecef; border: 1px solid #ced4da; color: #495057;
+            padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 14px;
+            font-weight: bold; transition: background-color 0.2s;
+        }
+        .btn-toggle-archive:hover { background-color: #dee2e6; }
+        .btn-toggle-archive.active { background-color: #495057; color: #fff; border-color: #495057; }
+        .archive-count-badge {
+            background-color: #868e96; color: #fff; border-radius: 999px;
+            padding: 2px 8px; font-size: 12px; font-weight: bold;
+        }
         .dataTables_wrapper { width: 100%; }
         .dataTables_wrapper .dataTables_length,
         .dataTables_wrapper .dataTables_filter {
-            float: none;
-            text-align: left;
-            margin-bottom: 10px;
+            float: none; text-align: left; margin-bottom: 10px;
         }
-        .dataTables_wrapper .dataTables_filter input {
-            max-width: 100%;
-            box-sizing: border-box;
-        }
+        .dataTables_wrapper .dataTables_filter input { max-width: 100%; box-sizing: border-box; }
         .dataTables_wrapper .dataTables_info,
         .dataTables_wrapper .dataTables_paginate {
-            float: none;
-            text-align: left;
-            margin-top: 10px;
+            float: none; text-align: left; margin-top: 10px;
         }
         .dataTables_wrapper .dataTables_paginate { white-space: normal; }
-        table.dataTable > tbody > tr.child ul.dtr-details {
-            width: 100%;
-            padding: 0;
-        }
+        table.dataTable > tbody > tr.child ul.dtr-details { width: 100%; padding: 0; }
         table.dataTable > tbody > tr.child ul.dtr-details > li,
         .responsive-detail-list .detail-item {
-            display: grid;
-            grid-template-columns: minmax(88px, 140px) 1fr;
-            gap: 10px;
-            align-items: start;
-            padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
+            display: grid; grid-template-columns: minmax(88px, 140px) 1fr;
+            gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid #e9ecef;
         }
-        .responsive-detail-list .detail-label {
-            color: #64748b;
-            font-weight: bold;
-        }
-        .responsive-detail-list .detail-value {
-            min-width: 0;
-            overflow-wrap: anywhere;
-        }
+        .responsive-detail-list .detail-label { color: #64748b; font-weight: bold; }
+        .responsive-detail-list .detail-value { min-width: 0; overflow-wrap: anywhere; }
         table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
         table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
-            top: 50%;
-            transform: translateY(-50%);
+            top: 50%; transform: translateY(-50%);
         }
-        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control {
-            cursor: pointer;
-        }
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control { cursor: pointer; }
         table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control .drag-handle {
-            box-sizing: border-box;
-            padding-left: 18px;
+            box-sizing: border-box; padding-left: 18px;
         }
-
-        /* 🟢 新增：拖曳把手的專屬樣式 */
         .drag-handle {
-            cursor: grab;
-            font-size: 20px;
-            color: #adb5bd;
-            display: inline-block;
-            width: 100%;
+            cursor: grab; font-size: 20px; color: #adb5bd;
+            display: inline-block; width: 100%;
         }
         .drag-handle:active { cursor: grabbing; color: #495057; }
-        
-        /* 拖曳時整列的半透明浮動視覺效果 */
         .ui-sortable-helper {
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             background-color: rgba(255, 255, 255, 0.95) !important;
@@ -237,10 +202,9 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>得賢引才 - 聘工進度即時追蹤表</h2>
-    
+
     <div class="form-section" id="inputForm">
         <div class="form-group">
             <label>雇主姓名</label>
@@ -273,7 +237,6 @@
             <label>確工編號</label>
             <input type="text" id="confirmedWorkerId" placeholder="輸入編號">
         </div>
-
         <div class="form-group">
             <label>聘工表狀態</label>
             <select id="formStatus">
@@ -287,11 +250,19 @@
             <label>上傳聘工表 (選填)</label>
             <input type="file" id="hiringDoc" accept=".pdf, image/*">
         </div>
-        
+
         <div class="button-group">
             <button type="button" class="btn-submit" id="submitBtn">新增進度紀錄</button>
             <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">聘工表填寫</a>
         </div>
+    </div>
+
+    <!-- ✅ 切換顯示已引進案件的工具列 -->
+    <div class="archive-toolbar">
+        <button type="button" class="btn-toggle-archive" id="toggleArchiveBtn">
+            👁 顯示已引進案件
+        </button>
+        <span class="archive-count-badge" id="archiveCountBadge" style="display:none;">0</span>
     </div>
 
     <div class="table-responsive">
@@ -317,7 +288,6 @@
         </table>
     </div>
 </div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -334,10 +304,16 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app); 
-    const progressCol = collection(db, "hiring_progress"); 
+    const storage = getStorage(app);
+    const progressCol = collection(db, "hiring_progress");
 
     let dataTable;
+    // ✅ 控制是否顯示已引進（封存）案件
+    let showArchived = false;
+    // ✅ 全域快取所有資料，切換顯示時直接重繪不需再請求 Firebase
+    let cachedAllDocs = [];
+    let cachedWorkerFrequency = {};
+
     $(document).ready(function() {
         dataTable = $('#progressTable').DataTable({
             responsive: {
@@ -353,14 +329,13 @@
                                 </div>`
                                 : '';
                         }).join('');
-
                         return data ? $('<div class="responsive-detail-list"/>').append(data) : false;
                     }
                 }
             },
             autoWidth: false,
             language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' },
-            pageLength: 50, // 增加單頁顯示數量方便拖曳
+            pageLength: 50,
             ordering: false,
             columnDefs: [
                 { responsivePriority: 1, targets: 1 },
@@ -378,44 +353,46 @@
             ]
         });
 
-        // 🟢 啟動 jQuery UI 的拖曳排序功能
         $('#tableBody').sortable({
             items: 'tr:not(.child)',
-            handle: '.drag-handle', // 指定只有按住 ☰ 才能拖曳
-            axis: 'y', // 限制只能上下拖動
+            handle: '.drag-handle',
+            axis: 'y',
             update: async function(event, ui) {
                 const $row = ui.item;
                 const docId = $row.find('.drag-handle').data('id');
-                
-                // 取得被拖曳列的「上一列」與「下一列」的權重分數
                 const $prev = $row.prevAll('tr:not(.child)').first();
                 const $next = $row.nextAll('tr:not(.child)').first();
-                
                 let prevOrder = $prev.length ? parseFloat($prev.find('.drag-handle').data('order')) : null;
                 let nextOrder = $next.length ? parseFloat($next.find('.drag-handle').data('order')) : null;
-                
                 let newSortOrder = 0;
-
-                // 核心運算：把新位置的上下分數相加除以二
                 if (prevOrder !== null && nextOrder !== null) {
                     newSortOrder = (prevOrder + nextOrder) / 2;
                 } else if (prevOrder !== null) {
-                    // 拖到最後一名
-                    newSortOrder = prevOrder - 10000; 
+                    newSortOrder = prevOrder - 10000;
                 } else if (nextOrder !== null) {
-                    // 拖到第一名
-                    newSortOrder = nextOrder + 10000; 
+                    newSortOrder = nextOrder + 10000;
                 }
-
                 try {
-                    // 將算出的新權重寫入資料庫，永久鎖定順序！
-                    const docRef = doc(db, "hiring_progress", docId);
-                    await updateDoc(docRef, { sortOrder: newSortOrder });
+                    await updateDoc(doc(db, "hiring_progress", docId), { sortOrder: newSortOrder });
                 } catch (error) {
                     console.error("更新排序失敗：", error);
                     alert("排序更新失敗，請檢查網路狀態！");
                 }
             }
+        });
+
+        // ✅ 切換顯示已引進案件的按鈕事件
+        document.getElementById('toggleArchiveBtn').addEventListener('click', function() {
+            showArchived = !showArchived;
+            const btn = document.getElementById('toggleArchiveBtn');
+            if (showArchived) {
+                btn.textContent = '🙈 隱藏已引進案件';
+                btn.classList.add('active');
+            } else {
+                btn.textContent = '👁 顯示已引進案件';
+                btn.classList.remove('active');
+            }
+            renderTable(cachedAllDocs, cachedWorkerFrequency);
         });
     });
 
@@ -424,138 +401,159 @@
         const date = timestamp.toDate();
         return date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
-
     function formatVideoTimeForDisplay(timeString) {
-        if(!timeString) return "尚未安排";
+        if (!timeString) return "尚未安排";
         return timeString.replace("T", " ");
     }
 
+    // ✅ 抽出渲染函式，可由 onSnapshot 或按鈕切換時呼叫
+    function renderTable(allDocsData, workerFrequency) {
+        if (!dataTable) return;
+
+        // 保存滾動位置，防止重繪後跳回頂部
+        const scrollPos = $(window).scrollTop();
+
+        // ✅ 依照 showArchived 決定要渲染哪些列
+        const visibleData = showArchived
+            ? allDocsData  // 全部顯示
+            : allDocsData.filter(data => !data.isArchived);  // 只顯示未封存的
+
+        dataTable.clear();
+        visibleData.forEach((data) => {
+            const docId = data.id;
+            const isArchived = !!data.isArchived;
+            const isConfirmed = data.confirmedWorker === '已確定';
+            const isPaused = data.formStatus === '暫停';
+            const isCompleted = data.formStatus === '已完成';
+
+            const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按一下展開細節；按住拖曳可調整順序">☰</span>`;
+
+            // ✅ 已引進的案件只顯示「取消引進」按鈕，其他案件顯示「已引進」等操作
+            const actionBtn = isArchived
+                ? `<div class="action-buttons">
+                    <button type="button" class="btn-unarchive" data-id="${docId}">↩ 取消引進</button>
+                    <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
+                   </div>`
+                : `<div class="action-buttons">
+                    <button type="button" class="btn-complete" data-id="${docId}">已引進</button>
+                    <button type="button" class="btn-pause" data-id="${docId}">暫停</button>
+                    <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
+                   </div>`;
+
+            const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
+            const uploadHtml = `
+                <label class="btn-row-upload">
+                    <span class="upload-label-text">${uploadText}</span>
+                    <input type="file" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
+                </label>`;
+            const attachmentHtml = data.fileUrl
+                ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 點擊下載/查看</a>`
+                : `<span style="color: #bbb;">無檔案</span>`;
+
+            let displayTargetWorker = "無";
+            if (data.targetWorker && data.targetWorker.trim() !== "") {
+                const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
+                let chunks = [];
+                for (let i = 0; i < workers.length; i += 3) {
+                    let chunkHtml = workers.slice(i, i + 3).map(w => {
+                        return (workerFrequency[w] > 1) ? `<span class="duplicate-worker">${w}</span>` : w;
+                    }).join('、');
+                    chunks.push(chunkHtml);
+                }
+                displayTargetWorker = chunks.join('<br>');
+            }
+
+            const formStatusText = isCompleted
+                ? '<span class="completed-badge">✓ 已完成</span>'
+                : (data.formStatus || "未填寫");
+            const formStatusClass = isCompleted ? 'status-completed' : (isPaused ? 'status-paused' : '');
+
+            const rowNode = dataTable.row.add([
+                dragHandleHtml,
+                `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
+                `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
+                `<span class="editable ${formStatusClass}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${formStatusText}</span>`,
+                uploadHtml,
+                attachmentHtml,
+                formatDate(data.updatedAt),
+                actionBtn
+            ]).node();
+
+            // ✅ 套用列樣式：已引進 > 暫停 > 已完成 > 已確定
+            if (isArchived) {
+                $(rowNode).addClass('row-archived');
+            } else if (isPaused) {
+                $(rowNode).addClass('row-paused');
+            } else if (isCompleted) {
+                $(rowNode).addClass('row-completed');
+            } else if (isConfirmed) {
+                $(rowNode).addClass('row-confirmed');
+            }
+        });
+
+        dataTable.draw(false);
+        dataTable.responsive.recalc();
+        $('#tableBody').sortable('refresh');
+
+        // 還原滾動位置
+        setTimeout(() => $(window).scrollTop(scrollPos), 0);
+    }
+
     const q = query(progressCol);
-    
     onSnapshot(q, (snapshot) => {
-        if(dataTable) {
-            let workerFrequency = {};
-            let allDocsData = [];
+        let workerFrequency = {};
+        let allDocsData = [];
+        let archivedCount = 0;
 
-            snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                data.id = docSnap.id;
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            data.id = docSnap.id;
+            if (!data.sortOrder) {
+                let fallbackOrder = data.createdAt ? data.createdAt.toMillis() : (data.updatedAt ? data.updatedAt.toMillis() : Date.now());
+                updateDoc(doc(db, "hiring_progress", data.id), { sortOrder: fallbackOrder }).catch(err => console.log(err));
+                data.sortOrder = fallbackOrder;
+            }
+            allDocsData.push(data);
+            if (data.isArchived) archivedCount++;
+            if (data.targetWorker) {
+                const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
+                workers.forEach(w => { workerFrequency[w] = (workerFrequency[w] || 0) + 1; });
+            }
+        });
+        allDocsData.sort((a, b) => b.sortOrder - a.sortOrder);
 
-                // 🟢 舊資料自動補齊排序權重 (sortOrder) 機制
-                if (!data.sortOrder) {
-                    // 如果這筆資料以前沒存過排序權重，我們拿它的時間戳記轉成數字當作初始權重
-                    let fallbackOrder = data.createdAt ? data.createdAt.toMillis() : (data.updatedAt ? data.updatedAt.toMillis() : Date.now());
-                    const docRef = doc(db, "hiring_progress", data.id);
-                    updateDoc(docRef, { sortOrder: fallbackOrder }).catch(err => console.log(err));
-                    data.sortOrder = fallbackOrder;
-                }
+        // 快取供切換顯示時使用
+        cachedAllDocs = allDocsData;
+        cachedWorkerFrequency = workerFrequency;
 
-                allDocsData.push(data);
-
-                if (data.targetWorker) {
-                    const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
-                    workers.forEach(w => {
-                        workerFrequency[w] = (workerFrequency[w] || 0) + 1;
-                    });
-                }
-            });
-
-            // 🟢 徹底改用我們自訂的 sortOrder 權重來排序！(由大到小)
-            allDocsData.sort((a, b) => b.sortOrder - a.sortOrder);
-
-            dataTable.clear(); 
-            allDocsData.forEach((data) => {
-                const docId = data.id;
-                const isConfirmed = data.confirmedWorker === '已確定';
-                const isPaused = data.formStatus === '暫停';
-                const isCompleted = data.formStatus === '已完成';
-
-                // 🟢 產生拖曳把手，並將它的權重分數綁在上面供拖曳時計算
-                const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按一下展開細節；按住拖曳可調整順序">☰</span>`;
-
-                const actionBtn = `
-                    <div class="action-buttons">
-                        <button type="button" class="btn-complete" data-id="${docId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? '已完成' : '完成'}</button>
-                        <button type="button" class="btn-pause" data-id="${docId}">暫停</button>
-                        <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
-                    </div>
-                `;
-
-                const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
-                const uploadHtml = `
-                    <label class="btn-row-upload">
-                        <span class="upload-label-text">${uploadText}</span>
-                        <input type="file" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
-                    </label>
-                `;
-
-                const attachmentHtml = data.fileUrl 
-                    ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 點擊下載/查看</a>`
-                    : `<span style="color: #bbb;">無檔案</span>`;
-
-                let displayTargetWorker = "無";
-                if (data.targetWorker && data.targetWorker.trim() !== "") {
-                    const workers = data.targetWorker.split(/[\s,，、]+/).filter(w => w.trim() !== "");
-                    let chunks = [];
-                    for (let i = 0; i < workers.length; i += 3) {
-                        let chunkHtml = workers.slice(i, i + 3).map(w => {
-                            return (workerFrequency[w] > 1) ? `<span class="duplicate-worker">${w}</span>` : w;
-                        }).join('、');
-                        chunks.push(chunkHtml);
-                    }
-                    displayTargetWorker = chunks.join('<br>');
-                }
-
-                const formStatusText = isCompleted
-                    ? '<span class="completed-badge">✓ 已完成</span>'
-                    : (data.formStatus || "未填寫");
-                const formStatusClass = isCompleted ? 'status-completed' : (isPaused ? 'status-paused' : '');
-
-                const rowNode = dataTable.row.add([
-                    dragHandleHtml, // 第一欄放入拖曳把手
-                    `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
-                    `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
-                    `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
-                    `<span class="editable ${formStatusClass}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${formStatusText}</span>`,
-                    uploadHtml,      
-                    attachmentHtml,  
-                    formatDate(data.updatedAt),
-                    actionBtn
-                ]).node();
-
-                if (isPaused) {
-                    $(rowNode).addClass('row-paused');
-                } else if (isCompleted) {
-                    $(rowNode).addClass('row-completed');
-                } else if (isConfirmed) {
-                    $(rowNode).addClass('row-confirmed');
-                }
-            });
-            dataTable.draw(false); 
-            dataTable.responsive.recalc();
-            // 重繪完成後，更新拖曳套件確保它綁定最新的畫面
-            $('#tableBody').sortable('refresh');
+        // 更新已引進數量徽章
+        const badge = document.getElementById('archiveCountBadge');
+        if (archivedCount > 0) {
+            badge.textContent = archivedCount;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
         }
+
+        renderTable(allDocsData, workerFrequency);
     });
 
     document.getElementById("submitBtn").addEventListener("click", async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
         const empName = document.getElementById("empName").value.trim();
         if (empName === "") { alert("請至少輸入「雇主姓名」！"); return; }
-
         const submitBtn = document.getElementById("submitBtn");
         const fileInput = document.getElementById("hiringDoc");
         const file = fileInput.files[0];
         let downloadUrl = null;
         let originalFileName = null;
-
         if (file) {
             submitBtn.disabled = true;
             submitBtn.textContent = "檔案上傳中，請稍候...";
-
             try {
                 const uniqueFilename = Date.now() + '_' + file.name;
                 const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
@@ -567,10 +565,9 @@
                 alert("檔案上傳失敗！請檢查網路或稍後再試。");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "新增進度紀錄";
-                return; 
+                return;
             }
         }
-
         const newRecord = {
             empName: empName,
             needRecommendation: document.getElementById("needRecommendation").value,
@@ -579,29 +576,26 @@
             confirmedWorker: document.getElementById("confirmedWorker").value,
             confirmedWorkerId: document.getElementById("confirmedWorkerId").value.trim(),
             formStatus: document.getElementById("formStatus").value,
-            // 🟢 新增案件時，賦予它當下時間作為最大權重，保證它出生在第一列
+            isArchived: false,
             sortOrder: Date.now(),
             createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp() 
+            updatedAt: serverTimestamp()
         };
-
         if (downloadUrl) {
             newRecord.fileUrl = downloadUrl;
             newRecord.fileName = originalFileName;
         }
-
         try {
             await addDoc(progressCol, newRecord);
             document.getElementById("empName").value = "";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
-            document.getElementById("confirmedWorkerId").value = ""; 
-            fileInput.value = ""; 
-            
+            document.getElementById("confirmedWorkerId").value = "";
+            fileInput.value = "";
             submitBtn.disabled = false;
             submitBtn.textContent = "新增進度紀錄";
-        } catch (error) { 
-            console.error("寫入錯誤：", error); 
+        } catch (error) {
+            console.error("寫入錯誤：", error);
             submitBtn.disabled = false;
             submitBtn.textContent = "新增進度紀錄";
         }
@@ -609,28 +603,22 @@
 
     $('#tableBody').on('change', '.row-file-input', async function(e) {
         const file = e.target.files[0];
-        if (!file) return; 
-        
+        if (!file) return;
         const docId = $(this).data('id');
         const $label = $(this).closest('.btn-row-upload');
         const $labelText = $label.find('.upload-label-text');
         const originalText = $labelText.text();
-        
         $labelText.text('⏳ 上傳中...');
         $label.css('pointer-events', 'none');
-
         try {
             const uniqueFilename = Date.now() + '_' + file.name;
             const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
             await uploadBytes(storageRef, file);
             const downloadUrl = await getDownloadURL(storageRef);
-
-            const docRef = doc(db, "hiring_progress", docId);
-            // 🟢 行內修改：不再更動排序相關欄位，所以絕對不會跳走
-            await updateDoc(docRef, { 
+            await updateDoc(doc(db, "hiring_progress", docId), {
                 fileUrl: downloadUrl,
                 fileName: file.name,
-                updatedAt: serverTimestamp() 
+                updatedAt: serverTimestamp()
             });
         } catch (error) {
             console.error("行內上傳失敗：", error);
@@ -642,33 +630,43 @@
     });
 
     $('#tableBody').on('click', '.btn-delete', async function() {
-        if(confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
+        if (confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
-            try { await deleteDoc(doc(db, "hiring_progress", docId)); } 
+            try { await deleteDoc(doc(db, "hiring_progress", docId)); }
             catch (error) { console.error("刪除錯誤：", error); }
         }
     });
 
     $('#tableBody').on('click', '.btn-pause', async function() {
-        if(confirm("確定要將此案件狀態設為「暫停」嗎？")) {
+        if (confirm("確定要將此案件狀態設為「暫停」嗎？")) {
             const docId = $(this).data('id');
-            try { 
-                const docRef = doc(db, "hiring_progress", docId);
-                await updateDoc(docRef, { formStatus: "暫停", updatedAt: serverTimestamp() });
+            try {
+                await updateDoc(doc(db, "hiring_progress", docId), { formStatus: "暫停", updatedAt: serverTimestamp() });
             } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
         }
     });
 
+    // ✅ 點擊「已引進」：將 isArchived 設為 true（不動 formStatus）
     $('#tableBody').on('click', '.btn-complete', async function() {
-        if ($(this).prop('disabled')) return;
-
-        if(confirm("確定要將此案件狀態設為「已完成」嗎？")) {
-            const docId = $(this).data('id');
+        const docId = $(this).data('id');
+        if (confirm("確定將此案件標記為「已引進」並從清單隱藏嗎？")) {
             try {
-                const docRef = doc(db, "hiring_progress", docId);
-                await updateDoc(docRef, { formStatus: "已完成", updatedAt: serverTimestamp() });
+                await updateDoc(doc(db, "hiring_progress", docId), { isArchived: true, updatedAt: serverTimestamp() });
             } catch (error) {
-                console.error("完成狀態更新錯誤：", error);
+                console.error("已引進狀態更新錯誤：", error);
+                alert("狀態更新失敗，請稍後再試！");
+            }
+        }
+    });
+
+    // ✅ 點擊「取消引進」：將 isArchived 設為 false，案件回到清單
+    $('#tableBody').on('click', '.btn-unarchive', async function() {
+        const docId = $(this).data('id');
+        if (confirm("確定要將此案件從「已引進」恢復到進行中清單嗎？")) {
+            try {
+                await updateDoc(doc(db, "hiring_progress", docId), { isArchived: false, updatedAt: serverTimestamp() });
+            } catch (error) {
+                console.error("取消引進錯誤：", error);
                 alert("狀態更新失敗，請稍後再試！");
             }
         }
@@ -676,83 +674,65 @@
 
     $('#tableBody').on('dblclick', '.editable', function() {
         if ($(this).find('input, select').length > 0) return;
-
         const rawVal = $(this).attr('data-raw-val');
         const currentText = rawVal !== undefined ? rawVal : $(this).text();
         const docId = $(this).data('id');
         const fieldName = $(this).data('field');
         const $cell = $(this);
         let inputHtml = '';
-
         if (fieldName === 'confirmedWorker') {
-            inputHtml = `
-                <select class="edit-input">
-                    <option value="尚未確定" ${currentText==='尚未確定'?'selected':''}>尚未確定</option>
-                    <option value="已確定" ${currentText==='已確定'?'selected':''}>已確定</option>
-                    <option value="取消" ${currentText==='取消'?'selected':''}>取消</option>
-                </select>`;
+            inputHtml = `<select class="edit-input">
+                <option value="尚未確定" ${currentText==='尚未確定'?'selected':''}>尚未確定</option>
+                <option value="已確定" ${currentText==='已確定'?'selected':''}>已確定</option>
+                <option value="取消" ${currentText==='取消'?'selected':''}>取消</option>
+            </select>`;
         } else if (fieldName === 'needRecommendation') {
-            inputHtml = `
-                <select class="edit-input">
-                    <option value="否" ${currentText==='否'?'selected':''}>否</option>
-                    <option value="是" ${currentText==='是'?'selected':''}>是</option>
-                </select>`;
+            inputHtml = `<select class="edit-input">
+                <option value="否" ${currentText==='否'?'selected':''}>否</option>
+                <option value="是" ${currentText==='是'?'selected':''}>是</option>
+            </select>`;
         } else if (fieldName === 'formStatus') {
-            inputHtml = `
-                <select class="edit-input">
-                    <option value="未填寫" ${currentText==='未填寫'?'selected':''}>未填寫</option>
-                    <option value="處理中" ${currentText==='處理中'?'selected':''}>處理中</option>
-                    <option value="暫停" ${currentText==='暫停'?'selected':''}>暫停</option>
-                    <option value="已完成" ${currentText==='已完成'?'selected':''}>已完成</option>
-                </select>`;
+            inputHtml = `<select class="edit-input">
+                <option value="未填寫" ${currentText==='未填寫'?'selected':''}>未填寫</option>
+                <option value="處理中" ${currentText==='處理中'?'selected':''}>處理中</option>
+                <option value="暫停" ${currentText==='暫停'?'selected':''}>暫停</option>
+                <option value="已完成" ${currentText==='已完成'?'selected':''}>已完成</option>
+            </select>`;
         } else if (fieldName === 'videoTime') {
             inputHtml = `<input type="datetime-local" class="edit-input" value="${currentText}">`;
         } else {
             inputHtml = `<input type="text" class="edit-input" value="${currentText}">`;
         }
-
         $cell.html(inputHtml);
         const $input = $cell.find('.edit-input');
         $input.focus();
-
-        let isSaving = false; 
-
+        let isSaving = false;
         $input.on('blur keypress', async function(e) {
             if (e.type === 'keypress' && e.which !== 13) return;
             if (e.which === 13) e.preventDefault();
             if (isSaving) return;
             isSaving = true;
-
             const newValue = $(this).val().trim();
-
             if (fieldName === 'empName' && newValue === "") {
                 alert("雇主姓名不能為空白！");
-                $cell.html(currentText); 
+                $cell.html(currentText);
                 return;
             }
-
             if (newValue === currentText.trim()) {
-                try {
-                    const docRef = doc(db, "hiring_progress", docId);
-                    await updateDoc(docRef, { updatedAt: serverTimestamp() });
-                } catch (e) {}
+                try { await updateDoc(doc(db, "hiring_progress", docId), { updatedAt: serverTimestamp() }); } catch (e) {}
                 return;
             }
-
             try {
-                const docRef = doc(db, "hiring_progress", docId);
                 const updateData = {};
                 updateData[fieldName] = newValue;
-                updateData['updatedAt'] = serverTimestamp(); 
-                await updateDoc(docRef, updateData);
+                updateData['updatedAt'] = serverTimestamp();
+                await updateDoc(doc(db, "hiring_progress", docId), updateData);
             } catch (error) {
                 console.error("更新錯誤：", error);
                 alert("修改失敗，請稍後再試！");
             }
         });
     });
-
 </script>
-
 </body>
 </html>
