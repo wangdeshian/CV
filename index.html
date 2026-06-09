@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -39,14 +40,14 @@
 
         .table-responsive {
             width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: visible;
             margin-top: 15px;
         }
 
         .table-responsive table {
             width: 100% !important;
-            min-width: 1200px; 
+            min-width: 0;
+            table-layout: auto;
         }
         
         table.dataTable { border-collapse: collapse; width: 100%; }
@@ -54,7 +55,9 @@
             border: 1px solid #ddd;
             padding: 12px 8px;
             text-align: center;
-            white-space: nowrap; 
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
             vertical-align: middle;
         }
         table.dataTable th { background-color: #f1f5f9; color: #333; font-weight: bold; }
@@ -62,6 +65,27 @@
 
         .row-confirmed td { background-color: #e8f5e9 !important; }
         .status-confirmed { color: #1b5e20; font-weight: bold; }
+
+        .row-completed td {
+            background-color: #e0f7f3 !important;
+            border-top-color: #8dd8cb !important;
+            border-bottom-color: #8dd8cb !important;
+        }
+        .row-completed td:first-child { border-left: 5px solid #0f766e !important; }
+        .status-completed { color: #0f766e; font-weight: bold; }
+        .completed-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background-color: #0f766e;
+            color: #fff;
+            border-radius: 999px;
+            padding: 3px 9px;
+            font-weight: bold;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
 
         .row-paused td { background-color: #e9ecef !important; color: #6c757d !important; }
         .status-paused { color: #495057; font-weight: bold; }
@@ -119,11 +143,14 @@
             h2 { font-size: 1.5rem; } body { margin: 20px; } .container { padding: 25px; }
         }
 
-        .action-buttons { display: flex; gap: 8px; justify-content: center; align-items: center; }
+        .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
         .btn-delete { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-delete:hover { background-color: #c82333; }
         .btn-pause { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-pause:hover { background-color: #5a6268; }
+        .btn-complete { background-color: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn-complete:hover { background-color: #0b5f59; }
+        .btn-complete:disabled { background-color: #94a3b8; cursor: default; }
 
         .btn-view-file {
             background-color: #17a2b8; color: white; text-decoration: none;
@@ -139,6 +166,58 @@
         .btn-row-upload:hover { background-color: #e2e6ea; }
 
         .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
+
+        .dataTables_wrapper { width: 100%; }
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            float: none;
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        .dataTables_wrapper .dataTables_filter input {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            float: none;
+            text-align: left;
+            margin-top: 10px;
+        }
+        .dataTables_wrapper .dataTables_paginate { white-space: normal; }
+        table.dataTable > tbody > tr.child ul.dtr-details {
+            width: 100%;
+            padding: 0;
+        }
+        table.dataTable > tbody > tr.child ul.dtr-details > li,
+        .responsive-detail-list .detail-item {
+            display: grid;
+            grid-template-columns: minmax(88px, 140px) 1fr;
+            gap: 10px;
+            align-items: start;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .responsive-detail-list .detail-label {
+            color: #64748b;
+            font-weight: bold;
+        }
+        .responsive-detail-list .detail-value {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+        table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control {
+            cursor: pointer;
+        }
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control .drag-handle {
+            box-sizing: border-box;
+            padding-left: 18px;
+        }
 
         /* 🟢 新增：拖曳把手的專屬樣式 */
         .drag-handle {
@@ -217,7 +296,7 @@
     </div>
 
     <div class="table-responsive">
-        <table id="progressTable" class="display nowrap" style="width:100%">
+        <table id="progressTable" class="display" style="width:100%">
             <thead>
                 <tr>
                     <th style="width: 40px;">順序</th>
@@ -262,14 +341,47 @@
     let dataTable;
     $(document).ready(function() {
         dataTable = $('#progressTable').DataTable({
-            responsive: false, 
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' },
+            responsive: {
+                details: {
+                    type: 'inline',
+                    target: 0,
+                    renderer: function(api, rowIdx, columns) {
+                        const data = $.map(columns, function(col) {
+                            return col.hidden
+                                ? `<div class="detail-item" data-dt-row="${col.rowIndex}" data-dt-column="${col.columnIndex}">
+                                    <span class="detail-label">${col.title}</span>
+                                    <span class="detail-value">${col.data}</span>
+                                </div>`
+                                : '';
+                        }).join('');
+
+                        return data ? $('<div class="responsive-detail-list"/>').append(data) : false;
+                    }
+                }
+            },
+            autoWidth: false,
+            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/zh-HANT.json' },
             pageLength: 50, // 增加單頁顯示數量方便拖曳
-            ordering: false 
+            ordering: false,
+            columnDefs: [
+                { responsivePriority: 1, targets: 1 },
+                { responsivePriority: 2, targets: 7 },
+                { responsivePriority: 3, targets: 11 },
+                { responsivePriority: 4, targets: 0 },
+                { responsivePriority: 5, targets: 3 },
+                { responsivePriority: 6, targets: 4 },
+                { responsivePriority: 7, targets: 5 },
+                { responsivePriority: 8, targets: 6 },
+                { responsivePriority: 9, targets: 2 },
+                { responsivePriority: 10, targets: 8 },
+                { responsivePriority: 11, targets: 9 },
+                { responsivePriority: 12, targets: 10 }
+            ]
         });
 
         // 🟢 啟動 jQuery UI 的拖曳排序功能
         $('#tableBody').sortable({
+            items: 'tr:not(.child)',
             handle: '.drag-handle', // 指定只有按住 ☰ 才能拖曳
             axis: 'y', // 限制只能上下拖動
             update: async function(event, ui) {
@@ -277,8 +389,8 @@
                 const docId = $row.find('.drag-handle').data('id');
                 
                 // 取得被拖曳列的「上一列」與「下一列」的權重分數
-                const $prev = $row.prev();
-                const $next = $row.next();
+                const $prev = $row.prevAll('tr:not(.child)').first();
+                const $next = $row.nextAll('tr:not(.child)').first();
                 
                 let prevOrder = $prev.length ? parseFloat($prev.find('.drag-handle').data('order')) : null;
                 let nextOrder = $next.length ? parseFloat($next.find('.drag-handle').data('order')) : null;
@@ -357,24 +469,25 @@
                 const docId = data.id;
                 const isConfirmed = data.confirmedWorker === '已確定';
                 const isPaused = data.formStatus === '暫停';
+                const isCompleted = data.formStatus === '已完成';
 
                 // 🟢 產生拖曳把手，並將它的權重分數綁在上面供拖曳時計算
-                const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按住拖曳可調整順序">☰</span>`;
+                const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按一下展開細節；按住拖曳可調整順序">☰</span>`;
 
                 const actionBtn = `
                     <div class="action-buttons">
+                        <button type="button" class="btn-complete" data-id="${docId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? '已完成' : '完成'}</button>
                         <button type="button" class="btn-pause" data-id="${docId}">暫停</button>
                         <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
                     </div>
                 `;
 
-                const uploadBtnId = `upload_${docId}`;
                 const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
                 const uploadHtml = `
-                    <label for="${uploadBtnId}" class="btn-row-upload">
-                        ${uploadText}
+                    <label class="btn-row-upload">
+                        <span class="upload-label-text">${uploadText}</span>
+                        <input type="file" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
                     </label>
-                    <input type="file" id="${uploadBtnId}" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
                 `;
 
                 const attachmentHtml = data.fileUrl 
@@ -394,6 +507,11 @@
                     displayTargetWorker = chunks.join('<br>');
                 }
 
+                const formStatusText = isCompleted
+                    ? '<span class="completed-badge">✓ 已完成</span>'
+                    : (data.formStatus || "未填寫");
+                const formStatusClass = isCompleted ? 'status-completed' : (isPaused ? 'status-paused' : '');
+
                 const rowNode = dataTable.row.add([
                     dragHandleHtml, // 第一欄放入拖曳把手
                     `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
@@ -402,7 +520,7 @@
                     `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
                     `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
                     `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
-                    `<span class="editable ${isPaused ? 'status-paused' : ''}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${data.formStatus || "未填寫"}</span>`,
+                    `<span class="editable ${formStatusClass}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${formStatusText}</span>`,
                     uploadHtml,      
                     attachmentHtml,  
                     formatDate(data.updatedAt),
@@ -411,11 +529,14 @@
 
                 if (isPaused) {
                     $(rowNode).addClass('row-paused');
+                } else if (isCompleted) {
+                    $(rowNode).addClass('row-completed');
                 } else if (isConfirmed) {
                     $(rowNode).addClass('row-confirmed');
                 }
             });
             dataTable.draw(false); 
+            dataTable.responsive.recalc();
             // 重繪完成後，更新拖曳套件確保它綁定最新的畫面
             $('#tableBody').sortable('refresh');
         }
@@ -492,10 +613,12 @@
         if (!file) return; 
         
         const docId = $(this).data('id');
-        const $label = $(this).siblings('label');
-        const originalText = $label.text();
+        const $label = $(this).closest('.btn-row-upload');
+        const $labelText = $label.find('.upload-label-text');
+        const originalText = $labelText.text();
         
-        $label.text('⏳ 上傳中...').css('pointer-events', 'none');
+        $labelText.text('⏳ 上傳中...');
+        $label.css('pointer-events', 'none');
 
         try {
             const uniqueFilename = Date.now() + '_' + file.name;
@@ -513,7 +636,8 @@
         } catch (error) {
             console.error("行內上傳失敗：", error);
             alert("檔案上傳失敗！請檢查網路或稍後再試。");
-            $label.text(originalText).css('pointer-events', 'auto');
+            $labelText.text(originalText);
+            $label.css('pointer-events', 'auto');
         }
         $(this).val('');
     });
@@ -533,6 +657,21 @@
                 const docRef = doc(db, "hiring_progress", docId);
                 await updateDoc(docRef, { formStatus: "暫停", updatedAt: serverTimestamp() });
             } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
+        }
+    });
+
+    $('#tableBody').on('click', '.btn-complete', async function() {
+        if ($(this).prop('disabled')) return;
+
+        if(confirm("確定要將此案件狀態設為「已完成」嗎？")) {
+            const docId = $(this).data('id');
+            try {
+                const docRef = doc(db, "hiring_progress", docId);
+                await updateDoc(docRef, { formStatus: "已完成", updatedAt: serverTimestamp() });
+            } catch (error) {
+                console.error("完成狀態更新錯誤：", error);
+                alert("狀態更新失敗，請稍後再試！");
+            }
         }
     });
 
