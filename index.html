@@ -417,6 +417,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAB-b45xKSpUg5I43NUxZtzjytj9p5Fu_A",
@@ -430,10 +431,19 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const storage = getStorage(app);
+    const auth = getAuth(app);
     const progressCol = collection(db, "hiring_progress");
 
     const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB
     const ALLOWED_UPLOAD_EXTENSIONS = /\.(pdf|png|jpe?g|gif|webp|bmp|heic|heif)$/i;
+    let anonymousAuthError = null;
+    const anonymousAuthReady = signInAnonymously(auth)
+        .then((credential) => credential.user)
+        .catch((error) => {
+            anonymousAuthError = error;
+            console.warn("匿名登入失敗，上傳若需要登入權限會被 Firebase Storage 拒絕：", error);
+            return null;
+        });
 
     function formatFileSize(bytes) {
         if (!bytes && bytes !== 0) return "未知大小";
@@ -470,7 +480,7 @@
         const code = error?.code || "unknown";
         const message = error?.message || String(error || "未知錯誤");
         const hints = {
-            "storage/unauthorized": "Firebase Storage 權限不允許目前網頁上傳，請檢查 Storage Rules。",
+            "storage/unauthorized": "Firebase Storage 權限不允許目前網頁上傳。若 Storage Rules 需要登入，請先在 Firebase Authentication 啟用 Anonymous provider；若仍失敗，請檢查 Storage Rules 是否允許寫入 hiring_docs。",
             "storage/canceled": "上傳已被取消。",
             "storage/retry-limit-exceeded": "網路不穩或 Firebase 回應逾時，請重新整理後再試。",
             "storage/invalid-checksum": "檔案上傳後校驗失敗，請重新選檔再試。",
@@ -479,16 +489,22 @@
             "storage/invalid-url": "檔名或儲存路徑含有不支援字元，系統已會自動清理檔名，若仍失敗請更換檔名再試。",
             "unknown": "瀏覽器未提供明確錯誤碼，請開啟 Console 查看完整錯誤。"
         };
-        return [
+        const lines = [
             "檔案上傳失敗！",
             `錯誤碼：${code}`,
             `可能原因：${hints[code] || "請依錯誤訊息檢查 Firebase Storage、網路或檔案格式。"}`,
             `原始訊息：${message}`
-        ].join("\n");
+        ];
+        if (code === "storage/unauthorized" && anonymousAuthError) {
+            lines.push(`匿名登入狀態：失敗 (${anonymousAuthError.code || "unknown"})`);
+            lines.push(`匿名登入訊息：${anonymousAuthError.message || anonymousAuthError}`);
+        }
+        return lines.join("\n");
     }
 
     async function uploadHiringFile(file) {
         validateHiringFile(file);
+        await anonymousAuthReady;
         const safeFileName = sanitizeStorageFileName(file.name);
         const uniqueFilename = `${Date.now()}_${safeFileName}`;
         const storageRef = ref(storage, `hiring_docs/${uniqueFilename}`);
