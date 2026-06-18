@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -432,6 +434,75 @@
     const storage = getStorage(app);
     const progressCol = collection(db, "hiring_progress");
 
+    const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB
+    const ALLOWED_UPLOAD_EXTENSIONS = /\.(pdf|png|jpe?g|gif|webp|bmp|heic|heif)$/i;
+
+    function formatFileSize(bytes) {
+        if (!bytes && bytes !== 0) return "未知大小";
+        const units = ["B", "KB", "MB", "GB"];
+        let size = bytes;
+        let unitIndex = 0;
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size = size / 1024;
+            unitIndex++;
+        }
+        return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+    }
+
+    function sanitizeStorageFileName(fileName) {
+        const safeName = String(fileName || "upload")
+            .replace(/[\\/#?[\]*]/g, "_")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 120);
+        return safeName || "upload";
+    }
+
+    function validateHiringFile(file) {
+        if (!file) throw new Error("沒有選擇檔案。");
+        if (file.size > MAX_UPLOAD_SIZE) {
+            throw new Error(`檔案太大：${formatFileSize(file.size)}。目前限制為 ${formatFileSize(MAX_UPLOAD_SIZE)} 以內。`);
+        }
+        if (!ALLOWED_UPLOAD_EXTENSIONS.test(file.name)) {
+            throw new Error("檔案格式不支援。請上傳 PDF 或圖片檔。");
+        }
+    }
+
+    function getUploadErrorMessage(error) {
+        const code = error?.code || "unknown";
+        const message = error?.message || String(error || "未知錯誤");
+        const hints = {
+            "storage/unauthorized": "Firebase Storage 權限不允許目前網頁上傳，請檢查 Storage Rules。",
+            "storage/canceled": "上傳已被取消。",
+            "storage/retry-limit-exceeded": "網路不穩或 Firebase 回應逾時，請重新整理後再試。",
+            "storage/invalid-checksum": "檔案上傳後校驗失敗，請重新選檔再試。",
+            "storage/quota-exceeded": "Firebase Storage 額度已滿或方案限制已達上限。",
+            "storage/bucket-not-found": "找不到 Firebase Storage bucket，請檢查 storageBucket 設定。",
+            "storage/invalid-url": "檔名或儲存路徑含有不支援字元，系統已會自動清理檔名，若仍失敗請更換檔名再試。",
+            "unknown": "瀏覽器未提供明確錯誤碼，請開啟 Console 查看完整錯誤。"
+        };
+        return [
+            "檔案上傳失敗！",
+            `錯誤碼：${code}`,
+            `可能原因：${hints[code] || "請依錯誤訊息檢查 Firebase Storage、網路或檔案格式。"}`,
+            `原始訊息：${message}`
+        ].join("\n");
+    }
+
+    async function uploadHiringFile(file) {
+        validateHiringFile(file);
+        const safeFileName = sanitizeStorageFileName(file.name);
+        const uniqueFilename = `${Date.now()}_${safeFileName}`;
+        const storageRef = ref(storage, `hiring_docs/${uniqueFilename}`);
+        const metadata = {
+            contentType: file.type || "application/octet-stream",
+            customMetadata: { originalName: file.name }
+        };
+        await uploadBytes(storageRef, file, metadata);
+        const downloadUrl = await getDownloadURL(storageRef);
+        return { downloadUrl, originalFileName: file.name };
+    }
+
     let dataTable;
     // ✅ 控制是否顯示已引進（封存）案件
     let showArchived = false;
@@ -694,14 +765,12 @@
             submitBtn.disabled = true;
             submitBtn.textContent = "檔案上傳中，請稍候...";
             try {
-                const uniqueFilename = Date.now() + '_' + file.name;
-                const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
-                await uploadBytes(storageRef, file);
-                downloadUrl = await getDownloadURL(storageRef);
-                originalFileName = file.name;
+                const uploadResult = await uploadHiringFile(file);
+                downloadUrl = uploadResult.downloadUrl;
+                originalFileName = uploadResult.originalFileName;
             } catch (error) {
                 console.error("檔案上傳失敗：", error);
-                alert("檔案上傳失敗！請檢查網路或稍後再試。");
+                alert(getUploadErrorMessage(error));
                 submitBtn.disabled = false;
                 submitBtn.textContent = "新增進度紀錄";
                 return;
@@ -735,6 +804,7 @@
             submitBtn.textContent = "新增進度紀錄";
         } catch (error) {
             console.error("寫入錯誤：", error);
+            alert(`資料寫入失敗！\n錯誤碼：${error?.code || "unknown"}\n原始訊息：${error?.message || error}`);
             submitBtn.disabled = false;
             submitBtn.textContent = "新增進度紀錄";
         }
@@ -749,23 +819,35 @@
         const originalText = $labelText.text();
         $labelText.text('⏳ 上傳中...');
         $label.css('pointer-events', 'none');
+        let uploadResult = null;
         try {
-            const uniqueFilename = Date.now() + '_' + file.name;
-            const storageRef = ref(storage, 'hiring_docs/' + uniqueFilename);
-            await uploadBytes(storageRef, file);
-            const downloadUrl = await getDownloadURL(storageRef);
+            uploadResult = await uploadHiringFile(file);
+            $labelText.text('💾 更新資料中...');
             await updateDoc(doc(db, "hiring_progress", docId), {
-                fileUrl: downloadUrl,
+                fileUrl: uploadResult.downloadUrl,
                 fileName: file.name,
                 updatedAt: serverTimestamp()
             });
+            $labelText.text('✅ 已上傳');
         } catch (error) {
-            console.error("行內上傳失敗：", error);
-            alert("檔案上傳失敗！請檢查網路或稍後再試。");
-            $labelText.text(originalText);
-            $label.css('pointer-events', 'auto');
+            console.error("行內上傳或更新失敗：", error);
+            if (uploadResult?.downloadUrl) {
+                alert([
+                    "檔案已上傳，但資料表更新失敗！",
+                    `下載連結：${uploadResult.downloadUrl}`,
+                    `錯誤碼：${error?.code || "unknown"}`,
+                    `原始訊息：${error?.message || error}`
+                ].join("\n"));
+            } else {
+                alert(getUploadErrorMessage(error));
+            }
+        } finally {
+            setTimeout(() => {
+                $labelText.text(originalText);
+                $label.css('pointer-events', 'auto');
+            }, uploadResult ? 800 : 0);
+            $(this).val('');
         }
-        $(this).val('');
     });
 
     $('#tableBody').on('click', '.btn-delete', async function() {
