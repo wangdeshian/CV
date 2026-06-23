@@ -43,7 +43,7 @@
         }
         .table-responsive table {
             width: 100% !important;
-            min-width: 1340px;
+            min-width: 1380px;
             table-layout: fixed;
         }
 
@@ -258,22 +258,23 @@
         }
         #progressTable th:nth-child(1), #progressTable td:nth-child(1) { width: 52px; }
         #progressTable th:nth-child(2), #progressTable td:nth-child(2) { width: 100px; }
-        #progressTable th:nth-child(3), #progressTable td:nth-child(3) { width: 76px; }
-        #progressTable th:nth-child(4), #progressTable td:nth-child(4) { width: 240px; }
-        #progressTable th:nth-child(5), #progressTable td:nth-child(5) { width: 96px; }
-        #progressTable th:nth-child(6), #progressTable td:nth-child(6) { width: 86px; }
+        #progressTable th:nth-child(3), #progressTable td:nth-child(3) { width: 72px; }
+        #progressTable th:nth-child(4), #progressTable td:nth-child(4) { width: 76px; }
+        #progressTable th:nth-child(5), #progressTable td:nth-child(5) { width: 220px; }
+        #progressTable th:nth-child(6), #progressTable td:nth-child(6) { width: 96px; }
         #progressTable th:nth-child(7), #progressTable td:nth-child(7) { width: 86px; }
-        #progressTable th:nth-child(8), #progressTable td:nth-child(8) { width: 110px; }
-        #progressTable th:nth-child(9), #progressTable td:nth-child(9) { width: 88px; }
+        #progressTable th:nth-child(8), #progressTable td:nth-child(8) { width: 86px; }
+        #progressTable th:nth-child(9), #progressTable td:nth-child(9) { width: 110px; }
         #progressTable th:nth-child(10), #progressTable td:nth-child(10) { width: 88px; }
-        #progressTable th:nth-child(11), #progressTable td:nth-child(11) { width: 136px; }
-        #progressTable th:nth-child(12), #progressTable td:nth-child(12) { width: 190px; }
+        #progressTable th:nth-child(11), #progressTable td:nth-child(11) { width: 88px; }
+        #progressTable th:nth-child(12), #progressTable td:nth-child(12) { width: 136px; }
+        #progressTable th:nth-child(13), #progressTable td:nth-child(13) { width: 176px; }
         #progressTable th:nth-child(1),
         #progressTable td:nth-child(1),
         #progressTable th:nth-child(2),
         #progressTable td:nth-child(2),
-        #progressTable th:nth-child(12),
-        #progressTable td:nth-child(12) {
+        #progressTable th:nth-child(13),
+        #progressTable td:nth-child(13) {
             position: sticky;
             background-clip: padding-box;
         }
@@ -291,8 +292,8 @@
             background-color: #fff;
             box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
         }
-        #progressTable th:nth-child(12),
-        #progressTable td:nth-child(12) {
+        #progressTable th:nth-child(13),
+        #progressTable td:nth-child(13) {
             right: 0;
             z-index: 7;
             background-color: #fff;
@@ -300,28 +301,28 @@
         }
         #progressTable thead th:nth-child(1),
         #progressTable thead th:nth-child(2),
-        #progressTable thead th:nth-child(12) {
+        #progressTable thead th:nth-child(13) {
             z-index: 9;
             background-color: #f1f5f9;
         }
         #progressTable tbody tr.row-confirmed td:nth-child(1),
         #progressTable tbody tr.row-confirmed td:nth-child(2),
-        #progressTable tbody tr.row-confirmed td:nth-child(12) {
+        #progressTable tbody tr.row-confirmed td:nth-child(13) {
             background-color: #e8f5e9 !important;
         }
         #progressTable tbody tr.row-completed td:nth-child(1),
         #progressTable tbody tr.row-completed td:nth-child(2),
-        #progressTable tbody tr.row-completed td:nth-child(12) {
+        #progressTable tbody tr.row-completed td:nth-child(13) {
             background-color: #e0f7f3 !important;
         }
         #progressTable tbody tr.row-paused td:nth-child(1),
         #progressTable tbody tr.row-paused td:nth-child(2),
-        #progressTable tbody tr.row-paused td:nth-child(12) {
+        #progressTable tbody tr.row-paused td:nth-child(13) {
             background-color: #e9ecef !important;
         }
         #progressTable tbody tr.row-archived td:nth-child(1),
         #progressTable tbody tr.row-archived td:nth-child(2),
-        #progressTable tbody tr.row-archived td:nth-child(12) {
+        #progressTable tbody tr.row-archived td:nth-child(13) {
             background-color: #f1f3f5 !important;
         }
     </style>
@@ -334,6 +335,13 @@
         <div class="form-group">
             <label>雇主姓名</label>
             <input type="text" id="empName" placeholder="例如：王小明">
+        </div>
+        <div class="form-group">
+            <label>招募函</label>
+            <select id="recruitmentLetter">
+                <option value="初招">初招</option>
+                <option value="重招">重招</option>
+            </select>
         </div>
         <div class="form-group">
             <label>請公司推薦</label>
@@ -396,6 +404,7 @@
                 <tr>
                     <th style="width: 40px;">順序</th>
                     <th>雇主姓名</th>
+                    <th>招募函</th>
                     <th>請公司推薦</th>
                     <th>想看的工人</th>
                     <th>視訊時間</th>
@@ -549,17 +558,18 @@
             ordering: false,
             columnDefs: [
                 { responsivePriority: 1, targets: 1 },
-                { responsivePriority: 2, targets: 7 },
-                { responsivePriority: 3, targets: 11 },
-                { responsivePriority: 4, targets: 10 },
+                { responsivePriority: 2, targets: 8 },
+                { responsivePriority: 3, targets: 12 },
+                { responsivePriority: 4, targets: 11 },
                 { responsivePriority: 5, targets: 0 },
-                { responsivePriority: 5, targets: 3 },
-                { responsivePriority: 6, targets: 4 },
-                { responsivePriority: 7, targets: 5 },
-                { responsivePriority: 8, targets: 6 },
-                { responsivePriority: 9, targets: 2 },
-                { responsivePriority: 10, targets: 8 },
-                { responsivePriority: 11, targets: 9 }
+                { responsivePriority: 6, targets: 2 },
+                { responsivePriority: 7, targets: 4 },
+                { responsivePriority: 8, targets: 5 },
+                { responsivePriority: 9, targets: 6 },
+                { responsivePriority: 10, targets: 7 },
+                { responsivePriority: 11, targets: 3 },
+                { responsivePriority: 12, targets: 9 },
+                { responsivePriority: 13, targets: 10 }
             ]
         });
 
@@ -695,6 +705,7 @@
             const rowNode = dataTable.row.add([
                 dragHandleHtml,
                 `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="recruitmentLetter" data-raw-val="${data.recruitmentLetter || '初招'}">${data.recruitmentLetter || "初招"}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
@@ -792,6 +803,7 @@
         }
         const newRecord = {
             empName: empName,
+            recruitmentLetter: document.getElementById("recruitmentLetter").value,
             needRecommendation: document.getElementById("needRecommendation").value,
             targetWorker: document.getElementById("targetWorker").value.trim(),
             videoTime: document.getElementById("videoTime").value,
@@ -810,6 +822,7 @@
         try {
             await addDoc(progressCol, newRecord);
             document.getElementById("empName").value = "";
+            document.getElementById("recruitmentLetter").value = "初招";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
             document.getElementById("confirmedWorkerId").value = "";
@@ -920,6 +933,11 @@
                 <option value="尚未確定" ${currentText==='尚未確定'?'selected':''}>尚未確定</option>
                 <option value="已確定" ${currentText==='已確定'?'selected':''}>已確定</option>
                 <option value="取消" ${currentText==='取消'?'selected':''}>取消</option>
+            </select>`;
+        } else if (fieldName === 'recruitmentLetter') {
+            inputHtml = `<select class="edit-input">
+                <option value="初招" ${currentText==='初招'?'selected':''}>初招</option>
+                <option value="重招" ${currentText==='重招'?'selected':''}>重招</option>
             </select>`;
         } else if (fieldName === 'needRecommendation') {
             inputHtml = `<select class="edit-input">
