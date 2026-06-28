@@ -2,7 +2,7 @@ name: 每日候選人動態爬蟲
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 每天台灣時間 09:00 (UTC+8 = UTC 01:00)
+    - cron: '0 1 * * *'   # 台灣時間 09:00 (UTC+8 = UTC 01:00)
   workflow_dispatch:       # 手動觸發
 
 jobs:
@@ -11,12 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Run candidate scraper
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Run scraper
         run: python candidate_scraper.py
