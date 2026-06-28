@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -370,6 +371,38 @@
                 padding: 6px 9px;
                 font-size: 14px;
                 line-height: 1.2;
+            }
+            #progressTable td {
+                overflow: visible;
+                text-overflow: clip;
+            }
+            #progressTable .editable,
+            .responsive-detail-list .detail-value {
+                display: block;
+                width: 100%;
+                white-space: normal;
+                overflow-x: hidden;
+                overflow-y: visible;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+            #progressTable .worker-list,
+            .responsive-detail-list .worker-list {
+                flex-wrap: wrap;
+                white-space: normal;
+                overflow-x: hidden;
+                overflow-y: auto;
+                max-height: 96px;
+                align-content: flex-start;
+            }
+            #progressTable .worker-token,
+            #progressTable .duplicate-worker,
+            .responsive-detail-list .worker-token,
+            .responsive-detail-list .duplicate-worker {
+                max-width: 100%;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
             table.dataTable > tbody > tr.child ul.dtr-details > li,
             .responsive-detail-list .detail-item {
