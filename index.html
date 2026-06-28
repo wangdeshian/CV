@@ -3,60 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>å¾è³¢å¼æ - æ¡ä»¶é²åº¦è¿½è¹¤è¡¨</title>
+    <title>得賢引才 - 案件進度追蹤表</title>
 
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js">
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-        this.classList.add('active');
-        document.getElementById('tab-'+this.dataset.tab).classList.add('active');
-        if(this.dataset.tab==='candidate-changes') loadCandidateChanges();
-      });
-    });
-    let _changesLoaded=false, _allChanges=[];
-    async function loadCandidateChanges(){
-      if(_changesLoaded){renderChanges();return;}
-      const el=document.getElementById('candidateChangeLog');
-      el.innerHTML='<div class="empty-state">載入中…</div>';
-      try{
-        const q2=query(collection(db,'candidate_changes'),orderBy('date','desc'),limit(100));
-        const snap=await getDocs(q2);
-        _allChanges=[];
-        snap.forEach(d=>{_allChanges.push({id:d.id,...d.data()});});
-        _changesLoaded=true;renderChanges();
-      }catch(e){el.innerHTML='<div class="empty-state">載入失敗：'+e.message+'</div>';}
-    }
-    document.getElementById('clearDateFilterBtn').addEventListener('click',()=>{document.getElementById('changeDateFilter').value='';renderChanges();});
-    document.getElementById('changeDateFilter').addEventListener('change',renderChanges);
-    function renderChanges(){
-      const el=document.getElementById('candidateChangeLog');
-      const f=document.getElementById('changeDateFilter').value;
-      let recs=f?_allChanges.filter(r=>(r.date||'').startsWith(f)):_allChanges;
-      if(!recs.length){el.innerHTML='<div class="empty-state">目前無紀錄</div>';return;}
-      const g={};recs.forEach(r=>{const k=(r.date||'').slice(0,10)||'未知';if(!g[k])g[k]=[];g[k].push(r);});
-      let out='';
-      Object.keys(g).sort((a,b)=>b.localeCompare(a)).forEach(date=>{
-        const added=g[date].filter(r=>r.type==='added'),removed=g[date].filter(r=>r.type==='removed');
-        out+='<div class="change-date-group"><div class="change-date-label">📅 '+date+'</div>';
-        if(added.length)out+='<div class="change-section"><h3>✅ 新增（'+added.length+'）</h3>'+added.map(r=>'<div class="change-card added"><span class="change-badge added">新增</span><b>'+r.candidateId+'</b>'+(r.age?' · '+r.age+'歲':'')+(r.country?' · '+r.country:'')+'</div>').join('')+'</div>';
-        if(removed.length)out+='<div class="change-section"><h3>❌ 移除（'+removed.length+'）</h3>'+removed.map(r=>'<div class="change-card removed"><span class="change-badge removed">移除</span><b>'+r.candidateId+'</b>'+( r.age?' · '+r.age+'歲':'')+(r.country?' · '+r.country:'')+'</div>').join('')+'</div>';
-        out+='</div>';
-      });
-      el.innerHTML=out;
-    }
-</script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <style>
         body {
-            font-family: "å¾®è»æ­£é»é«", sans-serif;
+            font-family: "微軟正黑體", sans-serif;
             background-color: #f8f9fa;
             margin: 10px;
         }
@@ -119,7 +77,7 @@
         }
         .row-paused td { background-color: #e9ecef !important; color: #6c757d !important; }
         .status-paused { color: #495057; font-weight: bold; }
-        /* â å·²å¼é²ï¼å·²å°å­ï¼åçæ¨£å¼ */
+        /* ✅ 已引進（已封存）列的樣式 */
         .row-archived td {
             background-color: #f1f3f5 !important;
             color: #868e96 !important;
@@ -217,7 +175,7 @@
         .btn-pause:hover { background-color: #5a6268; }
         .btn-complete { background-color: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-complete:hover { background-color: #0b5f59; }
-        /* â å·²å¼é²æ¡ä»¶çãå¾©åãæé */
+        /* ✅ 已引進案件的「復原」按鈕 */
         .btn-unarchive { background-color: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 14px; }
         .btn-unarchive:hover { background-color: #5a6268; }
         .btn-view-file {
@@ -234,7 +192,7 @@
         }
         .btn-row-upload:hover { background-color: #e2e6ea; }
         .edit-input { width: 100%; box-sizing: border-box; padding: 5px; font-size: 14px; border: 1px solid #007bff; border-radius: 3px; }
-        /* â åæé¡¯ç¤ºå·²å¼é²æ¡ä»¶çå·¥å·å */
+        /* ✅ 切換顯示已引進案件的工具列 */
         .archive-toolbar {
             display: flex; align-items: center; gap: 12px;
             margin-bottom: 10px; flex-wrap: wrap;
@@ -481,71 +439,71 @@
           <button class="tab-btn" data-tab="candidate-changes">🔔 候選人動態</button>
         </div>
         <div id="tab-main" class="tab-panel active">
-    <h2>å¾è³¢å¼æ - èå·¥é²åº¦å³æè¿½è¹¤è¡¨</h2>
+    <h2>得賢引才 - 聘工進度即時追蹤表</h2>
 
     <div class="form-section" id="inputForm">
         <div class="form-group">
-            <label>éä¸»å§å</label>
-            <input type="text" id="empName" placeholder="ä¾å¦ï¼çå°æ">
+            <label>雇主姓名</label>
+            <input type="text" id="empName" placeholder="例如：王小明">
         </div>
         <div class="form-group">
-            <label>æåå½</label>
+            <label>招募函</label>
             <select id="recruitmentLetter">
-                <option value="åæ">åæ</option>
-                <option value="éæ">éæ</option>
+                <option value="初招">初招</option>
+                <option value="重招">重招</option>
             </select>
         </div>
         <div class="form-group">
-            <label>è«å¬å¸æ¨è¦</label>
+            <label>請公司推薦</label>
             <select id="needRecommendation">
-                <option value="å¦">å¦</option>
-                <option value="æ¯">æ¯</option>
+                <option value="否">否</option>
+                <option value="是">是</option>
             </select>
         </div>
         <div class="form-group">
-            <label>æ³ççå·¥äºº</label>
-            <input type="text" id="targetWorker" placeholder="å¤ä½è«ç¨ç©ºç½æéèéé">
+            <label>想看的工人</label>
+            <input type="text" id="targetWorker" placeholder="多位請用空白或逗號隔開">
         </div>
         <div class="form-group">
-            <label>è¦è¨æé</label>
+            <label>視訊時間</label>
             <input type="datetime-local" id="videoTime">
         </div>
         <div class="form-group">
-            <label>ç¢ºå®å·¥äºº</label>
+            <label>確定工人</label>
             <select id="confirmedWorker">
-                <option value="å°æªç¢ºå®">å°æªç¢ºå®</option>
-                <option value="å·²ç¢ºå®">å·²ç¢ºå®</option>
-                <option value="åæ¶">åæ¶</option>
+                <option value="尚未確定">尚未確定</option>
+                <option value="已確定">已確定</option>
+                <option value="取消">取消</option>
             </select>
         </div>
         <div class="form-group">
-            <label>ç¢ºå·¥ç·¨è</label>
-            <input type="text" id="confirmedWorkerId" placeholder="è¼¸å¥ç·¨è">
+            <label>確工編號</label>
+            <input type="text" id="confirmedWorkerId" placeholder="輸入編號">
         </div>
         <div class="form-group">
-            <label>èå·¥è¡¨çæ</label>
+            <label>聘工表狀態</label>
             <select id="formStatus">
-                <option value="æªå¡«å¯«">æªå¡«å¯«</option>
-                <option value="èçä¸­">èçä¸­</option>
-                <option value="æ«å">æ«å</option>
-                <option value="å·²å®æ">å·²å®æ</option>
+                <option value="未填寫">未填寫</option>
+                <option value="處理中">處理中</option>
+                <option value="暫停">暫停</option>
+                <option value="已完成">已完成</option>
             </select>
         </div>
         <div class="form-group">
-            <label>ä¸å³èå·¥è¡¨ (é¸å¡«)</label>
+            <label>上傳聘工表 (選填)</label>
             <input type="file" id="hiringDoc" accept=".pdf, image/*">
         </div>
 
         <div class="button-group">
-            <button type="button" class="btn-submit" id="submitBtn">æ°å¢é²åº¦ç´é</button>
-            <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">èå·¥è¡¨å¡«å¯«</a>
+            <button type="button" class="btn-submit" id="submitBtn">新增進度紀錄</button>
+            <a href="https://wangdeshian.github.io/forms/" target="_blank" class="btn-link">聘工表填寫</a>
         </div>
     </div>
 
-    <!-- â åæé¡¯ç¤ºå·²å¼é²æ¡ä»¶çå·¥å·å -->
+    <!-- ✅ 切換顯示已引進案件的工具列 -->
     <div class="archive-toolbar">
         <button type="button" class="btn-toggle-archive" id="toggleArchiveBtn">
-            ð é¡¯ç¤ºå·²å¼é²æ¡ä»¶
+            👁 顯示已引進案件
         </button>
         <span class="archive-count-badge" id="archiveCountBadge" style="display:none;">0</span>
     </div>
@@ -554,25 +512,35 @@
         <table id="progressTable" class="display" style="width:100%">
             <thead>
                 <tr>
-                    <th style="width: 40px;">é åº</th>
-                    <th>éä¸»å§å</th>
-                    <th>æåå½</th>
-                    <th>è«å¬å¸æ¨è¦</th>
-                    <th>æ³ççå·¥äºº</th>
-                    <th>è¦è¨æé</th>
-                    <th>ç¢ºå®å·¥äºº</th>
-                    <th>ç¢ºå·¥ç·¨è</th>
-                    <th>èå·¥è¡¨çæ</th>
-                    <th>ä¸å³æªæ¡</th>
-                    <th>éä»¶ä¸è¼</th>
-                    <th>æå¾æ´æ°æé</th>
-                    <th>æä½</th>
+                    <th style="width: 40px;">順序</th>
+                    <th>雇主姓名</th>
+                    <th>招募函</th>
+                    <th>請公司推薦</th>
+                    <th>想看的工人</th>
+                    <th>視訊時間</th>
+                    <th>確定工人</th>
+                    <th>確工編號</th>
+                    <th>聘工表狀態</th>
+                    <th>上傳檔案</th>
+                    <th>附件下載</th>
+                    <th>最後更新時間</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
             </tbody>
         </table>
     </div>
+        </div><!-- end tab-main -->
+        <div id="tab-candidate-changes" class="tab-panel">
+          <h2>🔔 候選人動態</h2>
+          <div class="filter-bar">
+            <label>篩選日期：</label>
+            <input type="date" id="changeDateFilter">
+            <button type="button" id="clearDateFilterBtn">清除篩選</button>
+          </div>
+          <div id="candidateChangeLog"><div class="empty-state">點擊此分頁載入資料…</div></div>
+        </div>
 </div>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -602,12 +570,94 @@
         .then((credential) => credential.user)
         .catch((error) => {
             anonymousAuthError = error;
-            console.warn("å¿åç»å¥å¤±æï¼ä¸å³è¥éè¦ç»å¥æ¬éæè¢« Firebase Storage æçµï¼", error);
+            console.warn("匿名登入失敗，上傳若需要登入權限會被 Firebase Storage 拒絕：", error);
             return null;
         });
 
+    let candidateChangesLoaded = false;
+    let candidateChanges = [];
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            this.classList.add('active');
+            const panel = document.getElementById(`tab-${this.dataset.tab}`);
+            if (panel) panel.classList.add('active');
+            if (this.dataset.tab === 'candidate-changes') loadCandidateChanges();
+        });
+    });
+
+    const clearDateFilterBtn = document.getElementById('clearDateFilterBtn');
+    const changeDateFilter = document.getElementById('changeDateFilter');
+    if (clearDateFilterBtn) {
+        clearDateFilterBtn.addEventListener('click', () => {
+            if (changeDateFilter) changeDateFilter.value = '';
+            renderCandidateChanges();
+        });
+    }
+    if (changeDateFilter) {
+        changeDateFilter.addEventListener('change', renderCandidateChanges);
+    }
+
+    async function loadCandidateChanges() {
+        const container = document.getElementById('candidateChangeLog');
+        if (!container) return;
+        if (candidateChangesLoaded) {
+            renderCandidateChanges();
+            return;
+        }
+        container.innerHTML = '<div class="empty-state">載入中…</div>';
+        try {
+            const changesQuery = query(collection(db, 'candidate_changes'), orderBy('date', 'desc'), limit(100));
+            const snapshot = await getDocs(changesQuery);
+            candidateChanges = [];
+            snapshot.forEach(item => candidateChanges.push({ id: item.id, ...item.data() }));
+            candidateChangesLoaded = true;
+            renderCandidateChanges();
+        } catch (error) {
+            container.innerHTML = `<div class="empty-state">載入失敗：${escapeHtml(error.message || String(error))}</div>`;
+        }
+    }
+
+    function renderCandidateChanges() {
+        const container = document.getElementById('candidateChangeLog');
+        const dateFilter = document.getElementById('changeDateFilter')?.value || '';
+        if (!container) return;
+        const records = dateFilter
+            ? candidateChanges.filter(item => String(item.date || item.createdAt || '').startsWith(dateFilter))
+            : candidateChanges;
+        if (!records.length) {
+            container.innerHTML = '<div class="empty-state">目前無紀錄</div>';
+            return;
+        }
+
+        const grouped = {};
+        records.forEach(item => {
+            const dateKey = String(item.date || item.createdAt || '未知日期').slice(0, 10) || '未知日期';
+            if (!grouped[dateKey]) grouped[dateKey] = [];
+            grouped[dateKey].push(item);
+        });
+
+        container.innerHTML = Object.keys(grouped)
+            .sort((a, b) => b.localeCompare(a))
+            .map(date => {
+                const rows = grouped[date].map(item => {
+                    const action = item.action || item.type || '';
+                    const isRemoved = action === 'removed' || action === '移除';
+                    const badgeText = isRemoved ? '移除' : '新增';
+                    const cardClass = isRemoved ? 'removed' : 'added';
+                    const workerId = item.workerId || item.candidateId || item.id || '';
+                    const empName = item.empName ? `｜${escapeHtml(item.empName)}` : '';
+                    return `<div class="change-card ${cardClass}"><span class="change-badge ${cardClass}">${badgeText}</span><b>${escapeHtml(workerId)}</b>${empName}</div>`;
+                }).join('');
+                return `<div class="change-date-group"><div class="change-date-label">📅 ${escapeHtml(date)}</div><div class="change-section">${rows}</div></div>`;
+            })
+            .join('');
+    }
+
     function formatFileSize(bytes) {
-        if (!bytes && bytes !== 0) return "æªç¥å¤§å°";
+        if (!bytes && bytes !== 0) return "未知大小";
         const units = ["B", "KB", "MB", "GB"];
         let size = bytes;
         let unitIndex = 0;
@@ -628,37 +678,37 @@
     }
 
     function validateHiringFile(file) {
-        if (!file) throw new Error("æ²æé¸ææªæ¡ã");
+        if (!file) throw new Error("沒有選擇檔案。");
         if (file.size > MAX_UPLOAD_SIZE) {
-            throw new Error(`æªæ¡å¤ªå¤§ï¼${formatFileSize(file.size)}ãç®åéå¶çº ${formatFileSize(MAX_UPLOAD_SIZE)} ä»¥å§ã`);
+            throw new Error(`檔案太大：${formatFileSize(file.size)}。目前限制為 ${formatFileSize(MAX_UPLOAD_SIZE)} 以內。`);
         }
         if (!ALLOWED_UPLOAD_EXTENSIONS.test(file.name)) {
-            throw new Error("æªæ¡æ ¼å¼ä¸æ¯æ´ãè«ä¸å³ PDF æåçæªã");
+            throw new Error("檔案格式不支援。請上傳 PDF 或圖片檔。");
         }
     }
 
     function getUploadErrorMessage(error) {
         const code = error?.code || "unknown";
-        const message = error?.message || String(error || "æªç¥é¯èª¤");
+        const message = error?.message || String(error || "未知錯誤");
         const hints = {
-            "storage/unauthorized": "Firebase Storage æ¬éä¸åè¨±ç®åç¶²é ä¸å³ãè¥ Storage Rules éè¦ç»å¥ï¼è«åå¨ Firebase Authentication åç¨ Anonymous providerï¼è¥ä»å¤±æï¼è«æª¢æ¥ Storage Rules æ¯å¦åè¨±å¯«å¥ hiring_docsã",
-            "storage/canceled": "ä¸å³å·²è¢«åæ¶ã",
-            "storage/retry-limit-exceeded": "ç¶²è·¯ä¸ç©©æ Firebase åæé¾æï¼è«éæ°æ´çå¾åè©¦ã",
-            "storage/invalid-checksum": "æªæ¡ä¸å³å¾æ ¡é©å¤±æï¼è«éæ°é¸æªåè©¦ã",
-            "storage/quota-exceeded": "Firebase Storage é¡åº¦å·²æ»¿ææ¹æ¡éå¶å·²éä¸éã",
-            "storage/bucket-not-found": "æ¾ä¸å° Firebase Storage bucketï¼è«æª¢æ¥ storageBucket è¨­å®ã",
-            "storage/invalid-url": "æªåæå²å­è·¯å¾å«æä¸æ¯æ´å­åï¼ç³»çµ±å·²æèªåæ¸çæªåï¼è¥ä»å¤±æè«æ´ææªååè©¦ã",
-            "unknown": "çè¦½å¨æªæä¾æç¢ºé¯èª¤ç¢¼ï¼è«éå Console æ¥çå®æ´é¯èª¤ã"
+            "storage/unauthorized": "Firebase Storage 權限不允許目前網頁上傳。若 Storage Rules 需要登入，請先在 Firebase Authentication 啟用 Anonymous provider；若仍失敗，請檢查 Storage Rules 是否允許寫入 hiring_docs。",
+            "storage/canceled": "上傳已被取消。",
+            "storage/retry-limit-exceeded": "網路不穩或 Firebase 回應逾時，請重新整理後再試。",
+            "storage/invalid-checksum": "檔案上傳後校驗失敗，請重新選檔再試。",
+            "storage/quota-exceeded": "Firebase Storage 額度已滿或方案限制已達上限。",
+            "storage/bucket-not-found": "找不到 Firebase Storage bucket，請檢查 storageBucket 設定。",
+            "storage/invalid-url": "檔名或儲存路徑含有不支援字元，系統已會自動清理檔名，若仍失敗請更換檔名再試。",
+            "unknown": "瀏覽器未提供明確錯誤碼，請開啟 Console 查看完整錯誤。"
         };
         const lines = [
-            "æªæ¡ä¸å³å¤±æï¼",
-            `é¯èª¤ç¢¼ï¼${code}`,
-            `å¯è½åå ï¼${hints[code] || "è«ä¾é¯èª¤è¨æ¯æª¢æ¥ Firebase Storageãç¶²è·¯ææªæ¡æ ¼å¼ã"}`,
-            `åå§è¨æ¯ï¼${message}`
+            "檔案上傳失敗！",
+            `錯誤碼：${code}`,
+            `可能原因：${hints[code] || "請依錯誤訊息檢查 Firebase Storage、網路或檔案格式。"}`,
+            `原始訊息：${message}`
         ];
         if (code === "storage/unauthorized" && anonymousAuthError) {
-            lines.push(`å¿åç»å¥çæï¼å¤±æ (${anonymousAuthError.code || "unknown"})`);
-            lines.push(`å¿åç»å¥è¨æ¯ï¼${anonymousAuthError.message || anonymousAuthError}`);
+            lines.push(`匿名登入狀態：失敗 (${anonymousAuthError.code || "unknown"})`);
+            lines.push(`匿名登入訊息：${anonymousAuthError.message || anonymousAuthError}`);
         }
         return lines.join("\n");
     }
@@ -679,9 +729,9 @@
     }
 
     let dataTable;
-    // â æ§å¶æ¯å¦é¡¯ç¤ºå·²å¼é²ï¼å°å­ï¼æ¡ä»¶
+    // ✅ 控制是否顯示已引進（封存）案件
     let showArchived = false;
-    // â å¨åå¿«åææè³æï¼åæé¡¯ç¤ºæç´æ¥éç¹ªä¸éåè«æ± Firebase
+    // ✅ 全域快取所有資料，切換顯示時直接重繪不需再請求 Firebase
     let cachedAllDocs = [];
     let cachedWorkerFrequency = {};
 
@@ -748,21 +798,21 @@
                 try {
                     await updateDoc(doc(db, "hiring_progress", docId), { sortOrder: newSortOrder });
                 } catch (error) {
-                    console.error("æ´æ°æåºå¤±æï¼", error);
-                    alert("æåºæ´æ°å¤±æï¼è«æª¢æ¥ç¶²è·¯çæï¼");
+                    console.error("更新排序失敗：", error);
+                    alert("排序更新失敗，請檢查網路狀態！");
                 }
             }
         });
 
-        // â åæé¡¯ç¤ºå·²å¼é²æ¡ä»¶çæéäºä»¶
+        // ✅ 切換顯示已引進案件的按鈕事件
         document.getElementById('toggleArchiveBtn').addEventListener('click', function() {
             showArchived = !showArchived;
             const btn = document.getElementById('toggleArchiveBtn');
             if (showArchived) {
-                btn.textContent = 'ð é±èå·²å¼é²æ¡ä»¶';
+                btn.textContent = '🙈 隱藏已引進案件';
                 btn.classList.add('active');
             } else {
-                btn.textContent = 'ð é¡¯ç¤ºå·²å¼é²æ¡ä»¶';
+                btn.textContent = '👁 顯示已引進案件';
                 btn.classList.remove('active');
             }
             renderTable(cachedAllDocs, cachedWorkerFrequency);
@@ -776,12 +826,12 @@
         return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
     function formatVideoTimeForDisplay(timeString) {
-        if (!timeString) return "å°æªå®æ";
+        if (!timeString) return "尚未安排";
         return timeString.replace("T", " ");
     }
 
     function parseWorkerList(value) {
-        return (value || "").split(/[\s,ï¼ã`ï½]+/).map(w => w.trim()).filter(w => w !== "");
+        return (value || "").split(/[\s,，、`｀]+/).map(w => w.trim()).filter(w => w !== "");
     }
 
     function escapeHtml(value) {
@@ -794,51 +844,51 @@
         }[char]));
     }
 
-    // â æ½åºæ¸²æå½å¼ï¼å¯ç± onSnapshot ææéåææå¼å«
+    // ✅ 抽出渲染函式，可由 onSnapshot 或按鈕切換時呼叫
     function renderTable(allDocsData, workerFrequency) {
         if (!dataTable) return;
 
-        // ä¿å­æ»¾åä½ç½®ï¼é²æ­¢éç¹ªå¾è·³åé é¨
+        // 保存滾動位置，防止重繪後跳回頂部
         const scrollPos = $(window).scrollTop();
 
-        // â ä¾ç§ showArchived æ±ºå®è¦æ¸²æåªäºå
+        // ✅ 依照 showArchived 決定要渲染哪些列
         const visibleData = showArchived
-            ? allDocsData  // å¨é¨é¡¯ç¤º
-            : allDocsData.filter(data => !data.isArchived);  // åªé¡¯ç¤ºæªå°å­ç
+            ? allDocsData  // 全部顯示
+            : allDocsData.filter(data => !data.isArchived);  // 只顯示未封存的
 
         dataTable.clear();
         visibleData.forEach((data) => {
             const docId = data.id;
             const isArchived = !!data.isArchived;
-            const isConfirmed = data.confirmedWorker === 'å·²ç¢ºå®';
-            const isPaused = data.formStatus === 'æ«å';
-            const isCompleted = data.formStatus === 'å·²å®æ';
+            const isConfirmed = data.confirmedWorker === '已確定';
+            const isPaused = data.formStatus === '暫停';
+            const isCompleted = data.formStatus === '已完成';
 
-            const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="æä¸ä¸å±éç´°ç¯ï¼æä½ææ³å¯èª¿æ´é åº">â°</span>`;
+            const dragHandleHtml = `<span class="drag-handle" data-id="${docId}" data-order="${data.sortOrder}" title="按一下展開細節；按住拖曳可調整順序">☰</span>`;
 
-            // â å·²å¼é²çæ¡ä»¶åªé¡¯ç¤ºãåæ¶å¼é²ãæéï¼å¶ä»æ¡ä»¶é¡¯ç¤ºãå·²å¼é²ãç­æä½
+            // ✅ 已引進的案件只顯示「取消引進」按鈕，其他案件顯示「已引進」等操作
             const actionBtn = isArchived
                 ? `<div class="action-buttons">
-                    <button type="button" class="btn-unarchive" data-id="${docId}">â© åæ¶å¼é²</button>
-                    <button type="button" class="btn-delete" data-id="${docId}">åªé¤</button>
+                    <button type="button" class="btn-unarchive" data-id="${docId}">↩ 取消引進</button>
+                    <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
                    </div>`
                 : `<div class="action-buttons">
-                    <button type="button" class="btn-complete" data-id="${docId}">å·²å¼é²</button>
-                    <button type="button" class="btn-pause" data-id="${docId}">æ«å</button>
-                    <button type="button" class="btn-delete" data-id="${docId}">åªé¤</button>
+                    <button type="button" class="btn-complete" data-id="${docId}">已引進</button>
+                    <button type="button" class="btn-pause" data-id="${docId}">暫停</button>
+                    <button type="button" class="btn-delete" data-id="${docId}">刪除</button>
                    </div>`;
 
-            const uploadText = data.fileUrl ? 'ð éæ°ä¸å³' : 'ð¤ ä¸å³æªæ¡';
+            const uploadText = data.fileUrl ? '🔄 重新上傳' : '📤 上傳檔案';
             const uploadHtml = `
                 <label class="btn-row-upload">
                     <span class="upload-label-text">${uploadText}</span>
                     <input type="file" class="row-file-input" data-id="${docId}" accept=".pdf, image/*" style="display: none;">
                 </label>`;
             const attachmentHtml = data.fileUrl
-                ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || 'æ¥çæªæ¡'}">ð é»æä¸è¼/æ¥ç</a>`
-                : `<span style="color: #bbb;">ç¡æªæ¡</span>`;
+                ? `<a href="${data.fileUrl}" target="_blank" class="btn-view-file" title="${data.fileName || '查看檔案'}">📄 點擊下載/查看</a>`
+                : `<span style="color: #bbb;">無檔案</span>`;
 
-            let displayTargetWorker = `<span class="worker-empty">ç¡</span>`;
+            let displayTargetWorker = `<span class="worker-empty">無</span>`;
             if (data.targetWorker && data.targetWorker.trim() !== "") {
                 const workers = parseWorkerList(data.targetWorker);
                 const workerTags = workers.map(w => {
@@ -846,43 +896,32 @@
                     return `<span class="${tagClass}">${escapeHtml(w)}</span>`;
                 }).join('');
                 displayTargetWorker = workerTags
-                    ? `<div class="worker-list">${workerTags}
-        </div><!-- end tab-main -->
-        <div id="tab-candidate-changes" class="tab-panel">
-          <h2>🔔 候選人動態</h2>
-          <div class="filter-bar">
-            <label>篩選日期：</label>
-            <input type="date" id="changeDateFilter">
-            <button id="clearDateFilterBtn">清除篩選</button>
-          </div>
-          <div id="candidateChangeLog"><div class="empty-state">點擊此分頁載入資料…</div></div>
-        </div>
-        </div>`
-                    : `<span class="worker-empty">ç¡</span>`;
+                    ? `<div class="worker-list">${workerTags}</div>`
+                    : `<span class="worker-empty">無</span>`;
             }
 
             const formStatusText = isCompleted
-                ? '<span class="completed-badge">â å·²å®æ</span>'
-                : (data.formStatus || "æªå¡«å¯«");
+                ? '<span class="completed-badge">✓ 已完成</span>'
+                : (data.formStatus || "未填寫");
             const formStatusClass = isCompleted ? 'status-completed' : (isPaused ? 'status-paused' : '');
 
             const rowNode = dataTable.row.add([
                 dragHandleHtml,
                 `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
-                `<span class="editable" data-id="${docId}" data-field="recruitmentLetter" data-raw-val="${data.recruitmentLetter || 'åæ'}">${data.recruitmentLetter || "åæ"}</span>`,
-                `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || 'å¦'}">${data.needRecommendation || "å¦"}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="recruitmentLetter" data-raw-val="${data.recruitmentLetter || '初招'}">${data.recruitmentLetter || "初招"}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="needRecommendation" data-raw-val="${data.needRecommendation || '否'}">${data.needRecommendation || "否"}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
-                `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || 'å°æªç¢ºå®'}">${data.confirmedWorker || "å°æªç¢ºå®"}</span>`,
+                `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="confirmedWorkerId" data-raw-val="${data.confirmedWorkerId || ''}">${data.confirmedWorkerId || ""}</span>`,
-                `<span class="editable ${formStatusClass}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || 'æªå¡«å¯«'}">${formStatusText}</span>`,
+                `<span class="editable ${formStatusClass}" data-id="${docId}" data-field="formStatus" data-raw-val="${data.formStatus || '未填寫'}">${formStatusText}</span>`,
                 uploadHtml,
                 attachmentHtml,
                 `<span class="last-update-time">${formatDate(data.updatedAt)}</span>`,
                 actionBtn
             ]).node();
 
-            // â å¥ç¨åæ¨£å¼ï¼å·²å¼é² > æ«å > å·²å®æ > å·²ç¢ºå®
+            // ✅ 套用列樣式：已引進 > 暫停 > 已完成 > 已確定
             if (isArchived) {
                 $(rowNode).addClass('row-archived');
             } else if (isPaused) {
@@ -898,7 +937,7 @@
         dataTable.responsive.recalc();
         $('#tableBody').sortable('refresh');
 
-        // éåæ»¾åä½ç½®
+        // 還原滾動位置
         setTimeout(() => $(window).scrollTop(scrollPos), 0);
     }
 
@@ -925,11 +964,11 @@
         });
         allDocsData.sort((a, b) => b.sortOrder - a.sortOrder);
 
-        // å¿«åä¾åæé¡¯ç¤ºæä½¿ç¨
+        // 快取供切換顯示時使用
         cachedAllDocs = allDocsData;
         cachedWorkerFrequency = workerFrequency;
 
-        // æ´æ°å·²å¼é²æ¸éå¾½ç« 
+        // 更新已引進數量徽章
         const badge = document.getElementById('archiveCountBadge');
         if (archivedCount > 0) {
             badge.textContent = archivedCount;
@@ -944,7 +983,7 @@
     document.getElementById("submitBtn").addEventListener("click", async (e) => {
         e.preventDefault();
         const empName = document.getElementById("empName").value.trim();
-        if (empName === "") { alert("è«è³å°è¼¸å¥ãéä¸»å§åãï¼"); return; }
+        if (empName === "") { alert("請至少輸入「雇主姓名」！"); return; }
         const submitBtn = document.getElementById("submitBtn");
         const fileInput = document.getElementById("hiringDoc");
         const file = fileInput.files[0];
@@ -952,16 +991,16 @@
         let originalFileName = null;
         if (file) {
             submitBtn.disabled = true;
-            submitBtn.textContent = "æªæ¡ä¸å³ä¸­ï¼è«ç¨å...";
+            submitBtn.textContent = "檔案上傳中，請稍候...";
             try {
                 const uploadResult = await uploadHiringFile(file);
                 downloadUrl = uploadResult.downloadUrl;
                 originalFileName = uploadResult.originalFileName;
             } catch (error) {
-                console.error("æªæ¡ä¸å³å¤±æï¼", error);
+                console.error("檔案上傳失敗：", error);
                 alert(getUploadErrorMessage(error));
                 submitBtn.disabled = false;
-                submitBtn.textContent = "æ°å¢é²åº¦ç´é";
+                submitBtn.textContent = "新增進度紀錄";
                 return;
             }
         }
@@ -986,18 +1025,18 @@
         try {
             await addDoc(progressCol, newRecord);
             document.getElementById("empName").value = "";
-            document.getElementById("recruitmentLetter").value = "åæ";
+            document.getElementById("recruitmentLetter").value = "初招";
             document.getElementById("targetWorker").value = "";
             document.getElementById("videoTime").value = "";
             document.getElementById("confirmedWorkerId").value = "";
             fileInput.value = "";
             submitBtn.disabled = false;
-            submitBtn.textContent = "æ°å¢é²åº¦ç´é";
+            submitBtn.textContent = "新增進度紀錄";
         } catch (error) {
-            console.error("å¯«å¥é¯èª¤ï¼", error);
-            alert(`è³æå¯«å¥å¤±æï¼\né¯èª¤ç¢¼ï¼${error?.code || "unknown"}\nåå§è¨æ¯ï¼${error?.message || error}`);
+            console.error("寫入錯誤：", error);
+            alert(`資料寫入失敗！\n錯誤碼：${error?.code || "unknown"}\n原始訊息：${error?.message || error}`);
             submitBtn.disabled = false;
-            submitBtn.textContent = "æ°å¢é²åº¦ç´é";
+            submitBtn.textContent = "新增進度紀錄";
         }
     });
 
@@ -1008,26 +1047,26 @@
         const $label = $(this).closest('.btn-row-upload');
         const $labelText = $label.find('.upload-label-text');
         const originalText = $labelText.text();
-        $labelText.text('â³ ä¸å³ä¸­...');
+        $labelText.text('⏳ 上傳中...');
         $label.css('pointer-events', 'none');
         let uploadResult = null;
         try {
             uploadResult = await uploadHiringFile(file);
-            $labelText.text('ð¾ æ´æ°è³æä¸­...');
+            $labelText.text('💾 更新資料中...');
             await updateDoc(doc(db, "hiring_progress", docId), {
                 fileUrl: uploadResult.downloadUrl,
                 fileName: file.name,
                 updatedAt: serverTimestamp()
             });
-            $labelText.text('â å·²ä¸å³');
+            $labelText.text('✅ 已上傳');
         } catch (error) {
-            console.error("è¡å§ä¸å³ææ´æ°å¤±æï¼", error);
+            console.error("行內上傳或更新失敗：", error);
             if (uploadResult?.downloadUrl) {
                 alert([
-                    "æªæ¡å·²ä¸å³ï¼ä½è³æè¡¨æ´æ°å¤±æï¼",
-                    `ä¸è¼é£çµï¼${uploadResult.downloadUrl}`,
-                    `é¯èª¤ç¢¼ï¼${error?.code || "unknown"}`,
-                    `åå§è¨æ¯ï¼${error?.message || error}`
+                    "檔案已上傳，但資料表更新失敗！",
+                    `下載連結：${uploadResult.downloadUrl}`,
+                    `錯誤碼：${error?.code || "unknown"}`,
+                    `原始訊息：${error?.message || error}`
                 ].join("\n"));
             } else {
                 alert(getUploadErrorMessage(error));
@@ -1042,44 +1081,44 @@
     });
 
     $('#tableBody').on('click', '.btn-delete', async function() {
-        if (confirm("ç¢ºå®è¦åªé¤éç­ç´éåï¼(æ³¨æï¼ä¸æä¸ä½µåªé¤é²ç«¯æªæ¡ï¼è«è³ Firebase å¾å°æåæ¸ç)")) {
+        if (confirm("確定要刪除這筆紀錄嗎？(注意：不會一併刪除雲端檔案，請至 Firebase 後台手動清理)")) {
             const docId = $(this).data('id');
             try { await deleteDoc(doc(db, "hiring_progress", docId)); }
-            catch (error) { console.error("åªé¤é¯èª¤ï¼", error); }
+            catch (error) { console.error("刪除錯誤：", error); }
         }
     });
 
     $('#tableBody').on('click', '.btn-pause', async function() {
-        if (confirm("ç¢ºå®è¦å°æ­¤æ¡ä»¶çæè¨­çºãæ«åãåï¼")) {
+        if (confirm("確定要將此案件狀態設為「暫停」嗎？")) {
             const docId = $(this).data('id');
             try {
-                await updateDoc(doc(db, "hiring_progress", docId), { formStatus: "æ«å", updatedAt: serverTimestamp() });
-            } catch (error) { console.error("æ«åé¯èª¤ï¼", error); alert("çææ´æ°å¤±æï¼è«ç¨å¾åè©¦ï¼"); }
+                await updateDoc(doc(db, "hiring_progress", docId), { formStatus: "暫停", updatedAt: serverTimestamp() });
+            } catch (error) { console.error("暫停錯誤：", error); alert("狀態更新失敗，請稍後再試！"); }
         }
     });
 
-    // â é»æãå·²å¼é²ãï¼å° isArchived è¨­çº trueï¼ä¸å formStatusï¼
+    // ✅ 點擊「已引進」：將 isArchived 設為 true（不動 formStatus）
     $('#tableBody').on('click', '.btn-complete', async function() {
         const docId = $(this).data('id');
-        if (confirm("ç¢ºå®å°æ­¤æ¡ä»¶æ¨è¨çºãå·²å¼é²ãä¸¦å¾æ¸å®é±èåï¼")) {
+        if (confirm("確定將此案件標記為「已引進」並從清單隱藏嗎？")) {
             try {
                 await updateDoc(doc(db, "hiring_progress", docId), { isArchived: true, updatedAt: serverTimestamp() });
             } catch (error) {
-                console.error("å·²å¼é²çææ´æ°é¯èª¤ï¼", error);
-                alert("çææ´æ°å¤±æï¼è«ç¨å¾åè©¦ï¼");
+                console.error("已引進狀態更新錯誤：", error);
+                alert("狀態更新失敗，請稍後再試！");
             }
         }
     });
 
-    // â é»æãåæ¶å¼é²ãï¼å° isArchived è¨­çº falseï¼æ¡ä»¶åå°æ¸å®
+    // ✅ 點擊「取消引進」：將 isArchived 設為 false，案件回到清單
     $('#tableBody').on('click', '.btn-unarchive', async function() {
         const docId = $(this).data('id');
-        if (confirm("ç¢ºå®è¦å°æ­¤æ¡ä»¶å¾ãå·²å¼é²ãæ¢å¾©å°é²è¡ä¸­æ¸å®åï¼")) {
+        if (confirm("確定要將此案件從「已引進」恢復到進行中清單嗎？")) {
             try {
                 await updateDoc(doc(db, "hiring_progress", docId), { isArchived: false, updatedAt: serverTimestamp() });
             } catch (error) {
-                console.error("åæ¶å¼é²é¯èª¤ï¼", error);
-                alert("çææ´æ°å¤±æï¼è«ç¨å¾åè©¦ï¼");
+                console.error("取消引進錯誤：", error);
+                alert("狀態更新失敗，請稍後再試！");
             }
         }
     });
@@ -1094,26 +1133,26 @@
         let inputHtml = '';
         if (fieldName === 'confirmedWorker') {
             inputHtml = `<select class="edit-input">
-                <option value="å°æªç¢ºå®" ${currentText==='å°æªç¢ºå®'?'selected':''}>å°æªç¢ºå®</option>
-                <option value="å·²ç¢ºå®" ${currentText==='å·²ç¢ºå®'?'selected':''}>å·²ç¢ºå®</option>
-                <option value="åæ¶" ${currentText==='åæ¶'?'selected':''}>åæ¶</option>
+                <option value="尚未確定" ${currentText==='尚未確定'?'selected':''}>尚未確定</option>
+                <option value="已確定" ${currentText==='已確定'?'selected':''}>已確定</option>
+                <option value="取消" ${currentText==='取消'?'selected':''}>取消</option>
             </select>`;
         } else if (fieldName === 'recruitmentLetter') {
             inputHtml = `<select class="edit-input">
-                <option value="åæ" ${currentText==='åæ'?'selected':''}>åæ</option>
-                <option value="éæ" ${currentText==='éæ'?'selected':''}>éæ</option>
+                <option value="初招" ${currentText==='初招'?'selected':''}>初招</option>
+                <option value="重招" ${currentText==='重招'?'selected':''}>重招</option>
             </select>`;
         } else if (fieldName === 'needRecommendation') {
             inputHtml = `<select class="edit-input">
-                <option value="å¦" ${currentText==='å¦'?'selected':''}>å¦</option>
-                <option value="æ¯" ${currentText==='æ¯'?'selected':''}>æ¯</option>
+                <option value="否" ${currentText==='否'?'selected':''}>否</option>
+                <option value="是" ${currentText==='是'?'selected':''}>是</option>
             </select>`;
         } else if (fieldName === 'formStatus') {
             inputHtml = `<select class="edit-input">
-                <option value="æªå¡«å¯«" ${currentText==='æªå¡«å¯«'?'selected':''}>æªå¡«å¯«</option>
-                <option value="èçä¸­" ${currentText==='èçä¸­'?'selected':''}>èçä¸­</option>
-                <option value="æ«å" ${currentText==='æ«å'?'selected':''}>æ«å</option>
-                <option value="å·²å®æ" ${currentText==='å·²å®æ'?'selected':''}>å·²å®æ</option>
+                <option value="未填寫" ${currentText==='未填寫'?'selected':''}>未填寫</option>
+                <option value="處理中" ${currentText==='處理中'?'selected':''}>處理中</option>
+                <option value="暫停" ${currentText==='暫停'?'selected':''}>暫停</option>
+                <option value="已完成" ${currentText==='已完成'?'selected':''}>已完成</option>
             </select>`;
         } else if (fieldName === 'videoTime') {
             inputHtml = `<input type="datetime-local" class="edit-input" value="${currentText}">`;
@@ -1131,7 +1170,7 @@
             isSaving = true;
             const newValue = $(this).val().trim();
             if (fieldName === 'empName' && newValue === "") {
-                alert("éä¸»å§åä¸è½çºç©ºç½ï¼");
+                alert("雇主姓名不能為空白！");
                 $cell.html(currentText);
                 return;
             }
@@ -1145,8 +1184,8 @@
                 updateData['updatedAt'] = serverTimestamp();
                 await updateDoc(doc(db, "hiring_progress", docId), updateData);
             } catch (error) {
-                console.error("æ´æ°é¯èª¤ï¼", error);
-                alert("ä¿®æ¹å¤±æï¼è«ç¨å¾åè©¦ï¼");
+                console.error("更新錯誤：", error);
+                alert("修改失敗，請稍後再試！");
             }
         });
     });
