@@ -325,6 +325,57 @@
         #progressTable tbody tr.row-archived td:nth-child(13) {
             background-color: #f1f3f5 !important;
         }
+        @media (max-width: 767px) {
+            .table-responsive table {
+                min-width: 0;
+            }
+            #progressTable th:nth-child(1),
+            #progressTable td:nth-child(1),
+            #progressTable th:nth-child(2),
+            #progressTable td:nth-child(2),
+            #progressTable th:nth-child(13),
+            #progressTable td:nth-child(13) {
+                position: static;
+                left: auto;
+                right: auto;
+                box-shadow: none;
+            }
+            #progressTable th:nth-child(1),
+            #progressTable td:nth-child(1) {
+                width: 42px;
+            }
+            #progressTable th:nth-child(2),
+            #progressTable td:nth-child(2) {
+                width: 92px;
+            }
+            #progressTable th:nth-child(3),
+            #progressTable td:nth-child(3) {
+                width: 58px;
+            }
+            #progressTable th:nth-child(13),
+            #progressTable td:nth-child(13) {
+                width: 156px;
+            }
+            #progressTable th,
+            #progressTable td {
+                padding: 8px 6px;
+                white-space: normal;
+            }
+            .action-buttons {
+                justify-content: flex-start;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .action-buttons button {
+                padding: 6px 9px;
+                font-size: 14px;
+                line-height: 1.2;
+            }
+            table.dataTable > tbody > tr.child ul.dtr-details > li,
+            .responsive-detail-list .detail-item {
+                grid-template-columns: 88px minmax(0, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -557,12 +608,13 @@
             pageLength: 50,
             ordering: false,
             columnDefs: [
+                { className: 'all', targets: [0, 1, 2, 12] },
                 { responsivePriority: 1, targets: 1 },
-                { responsivePriority: 2, targets: 8 },
+                { responsivePriority: 2, targets: 2 },
                 { responsivePriority: 3, targets: 12 },
-                { responsivePriority: 4, targets: 11 },
-                { responsivePriority: 5, targets: 0 },
-                { responsivePriority: 6, targets: 2 },
+                { responsivePriority: 4, targets: 0 },
+                { responsivePriority: 5, targets: 8 },
+                { responsivePriority: 6, targets: 11 },
                 { responsivePriority: 7, targets: 4 },
                 { responsivePriority: 8, targets: 5 },
                 { responsivePriority: 9, targets: 6 },
