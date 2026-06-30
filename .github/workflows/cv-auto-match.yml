@@ -1,6 +1,12 @@
 name: CV Auto Match
 
 on:
+  push:
+    paths:
+      - ".github/workflows/cv-auto-match.yml"
+      - "outputs/**"
+      - "work/imaid/**"
+      - "requirements.txt"
   schedule:
     # 01:00 UTC = 09:00 Asia/Taipei
     - cron: "0 1 * * *"

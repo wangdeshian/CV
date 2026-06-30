@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+outputs/inspected_pdfs/
+outputs/logs/
+outputs/*_result.json
+outputs/experience_match_results.json
