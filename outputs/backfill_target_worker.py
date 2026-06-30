@@ -51,11 +51,11 @@ def main():
         recs = row.get("recommendations") or []
         if not recs:
             continue
-        codes = [r["candidateId"] for r in recs if r.get("candidateId") in active_ids][:5]
+        codes = [r["candidateId"] for r in recs if r.get("candidateId") in active_ids]
         if codes:
-            rec_by_emp[row["employer"]] = " ".join(codes)
+            rec_by_emp[row["employer"]] = codes
             if row.get("id"):
-                rec_by_id[row["id"]] = " ".join(codes)
+                rec_by_id[row["id"]] = codes
 
     docs = mc.fs_get_list("hiring_progress", page_size=100)
     updated = []
@@ -69,8 +69,12 @@ def main():
             continue
         current_value = mc.field(doc, "targetWorker") or ""
         current_active_codes = [code for code in extract_candidate_ids(current_value) if code in active_ids]
-        cleaned_current_value = " ".join(current_active_codes)
-        value = rec_by_id.get(doc_id) or rec_by_emp.get(emp) or cleaned_current_value
+        new_codes = rec_by_id.get(doc_id) or rec_by_emp.get(emp) or []
+        merged_codes = []
+        for code in current_active_codes + new_codes:
+            if code in active_ids and code not in merged_codes:
+                merged_codes.append(code)
+        value = " ".join(merged_codes)
         if not value:
             if current_value.strip():
                 body = {
