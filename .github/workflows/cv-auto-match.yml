@@ -36,6 +36,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Update candidate details
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: python outputs/update_candidate_details.py
+
       - name: Inspect hiring PDFs
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
