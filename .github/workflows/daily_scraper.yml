@@ -2,23 +2,62 @@ name: 每日候選人動態爬蟲
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 台灣時間 09:00 (UTC+8 = UTC 01:00)
+    # Backup schedules in UTC: 09:05, 11:05, 13:05 Asia/Taipei.
+    - cron: '5 1,3,5 * * *'
   workflow_dispatch:       # 手動觸發
 
 jobs:
-  scrape:
+  scrape-and-match:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install Playwright
+      - name: Install system OCR/PDF tools
         run: |
-          pip install playwright
-          playwright install chromium --with-deps
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-chi-tra
 
-      - name: Run scraper
-        run: python candidate_scraper.py
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update candidate details
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: python outputs/update_candidate_details.py
+
+      - name: Inspect hiring PDFs
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: python outputs/inspect_hiring_pdfs.py
+
+      - name: Match candidates by experience
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: python outputs/match_candidates_by_experience.py
+
+      - name: Backfill targetWorker
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: python outputs/backfill_target_worker.py
+
+      - name: Upload result files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv-auto-match-results
+          path: |
+            outputs/inspected_pdfs/summary.json
+            outputs/experience_match_results.json
+            outputs/backfill_target_worker_result.json
+          if-no-files-found: ignore
