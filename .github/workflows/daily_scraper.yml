@@ -1,6 +1,12 @@
 name: 每日候選人動態爬蟲
 
 on:
+  push:
+    paths:
+      - ".github/workflows/daily_scraper.yml"
+      - "outputs/**"
+      - "work/imaid/**"
+      - "requirements.txt"
   schedule:
     # Backup schedules in UTC: 09:05, 11:05, 13:05 Asia/Taipei.
     - cron: '5 1,3,5 * * *'
