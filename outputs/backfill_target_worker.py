@@ -56,7 +56,7 @@ def age_allowed(candidate_id, desired_age, candidate_ages):
         return True
     age = candidate_ages.get(candidate_id)
     if not age:
-        return True
+        return False
     return abs(age - desired_age) <= MAX_DESIRED_AGE_GAP
 
 
