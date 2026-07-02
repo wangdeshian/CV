@@ -23,6 +23,7 @@ DETAIL_DIR = ROOT / "work" / "imaid"
 PDF_TEXT_DIR = ROOT / "outputs" / "inspected_pdfs"
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
 PDF_SUMMARY = PDF_TEXT_DIR / "summary.json"
+MAX_DESIRED_AGE_GAP = 8
 
 spec = importlib.util.spec_from_file_location("mc", ROOT / "outputs" / "match_candidates.py")
 mc = importlib.util.module_from_spec(spec)
@@ -202,6 +203,13 @@ def score_candidate(candidate, demand):
     demand_tags = set(demand["careDemandTags"])
     exp_tags = set(candidate["experienceTags"])
 
+    desired_age = demand.get("desiredAgeMin")
+    candidate_age = candidate.get("age")
+    if desired_age and candidate_age:
+        age_gap = abs(candidate_age - desired_age)
+        if age_gap > MAX_DESIRED_AGE_GAP:
+            return -999, [], [f"年齡 {candidate_age} 歲與聘工表期望 {desired_age} 歲落差 {age_gap} 歲，已排除"]
+
     if not candidate["detailExists"]:
         risks.append("缺候選人詳細履歷，僅能用基本資料")
 
@@ -223,13 +231,15 @@ def score_candidate(candidate, demand):
             score -= 3
             risks.append("扶行/移位需求需確認體力與經驗")
 
-    if demand.get("desiredAgeMin") and candidate.get("age"):
-        if candidate["age"] >= demand["desiredAgeMin"]:
-            score += 4
-            reasons.append(f"年齡符合至少 {demand['desiredAgeMin']} 歲")
+    if desired_age and candidate_age:
+        age_gap = abs(candidate_age - desired_age)
+        if age_gap <= 2:
+            score += 8
+        elif age_gap <= 5:
+            score += 5
         else:
-            score -= 5
-            risks.append(f"年齡低於聘工表期望 {demand['desiredAgeMin']} 歲")
+            score += 2
+        reasons.append(f"年齡接近聘工表期望 {desired_age} 歲（候選人 {candidate_age} 歲）")
 
     if demand.get("desiredHeightMin") and candidate.get("height"):
         if candidate["height"] >= demand["desiredHeightMin"]:

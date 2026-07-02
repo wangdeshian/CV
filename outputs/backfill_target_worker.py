@@ -7,6 +7,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
+CANDIDATE_LIST = ROOT / "work" / "imaid" / "candidates-list.json"
+MAX_DESIRED_AGE_GAP = 8
 
 spec = importlib.util.spec_from_file_location("mc", ROOT / "outputs" / "match_candidates.py")
 mc = importlib.util.module_from_spec(spec)
@@ -42,12 +44,35 @@ def extract_candidate_ids(value):
     return [normalize_candidate_id(x) for x in re.findall(r"[A-Z]+\.?\d+", value or "")]
 
 
+def load_candidate_ages():
+    if not CANDIDATE_LIST.exists():
+        return {}
+    candidates = json.loads(CANDIDATE_LIST.read_text(encoding="utf-8"))
+    return {item.get("code"): item.get("age") for item in candidates if item.get("code")}
+
+
+def age_allowed(candidate_id, desired_age, candidate_ages):
+    if not desired_age:
+        return True
+    age = candidate_ages.get(candidate_id)
+    if not age:
+        return True
+    return abs(age - desired_age) <= MAX_DESIRED_AGE_GAP
+
+
 def main():
     active_ids = get_active_candidate_ids()
+    candidate_ages = load_candidate_ages()
     results = json.loads(RESULT_PATH.read_text(encoding="utf-8"))
     rec_by_emp = {}
     rec_by_id = {}
+    demand_by_emp = {}
+    demand_by_id = {}
     for row in results:
+        demand = row.get("demand") or {}
+        demand_by_emp[row["employer"]] = demand
+        if row.get("id"):
+            demand_by_id[row["id"]] = demand
         recs = row.get("recommendations") or []
         if not recs:
             continue
@@ -68,7 +93,12 @@ def main():
         if not is_active_case(doc):
             continue
         current_value = mc.field(doc, "targetWorker") or ""
-        current_active_codes = [code for code in extract_candidate_ids(current_value) if code in active_ids]
+        demand = demand_by_id.get(doc_id) or demand_by_emp.get(emp) or {}
+        desired_age = demand.get("desiredAgeMin")
+        current_active_codes = [
+            code for code in extract_candidate_ids(current_value)
+            if code in active_ids and age_allowed(code, desired_age, candidate_ages)
+        ]
         new_codes = rec_by_id.get(doc_id) or rec_by_emp.get(emp) or []
         merged_codes = []
         for code in current_active_codes + new_codes:
