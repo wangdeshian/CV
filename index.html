@@ -387,21 +387,25 @@
             }
             #progressTable .worker-list,
             .responsive-detail-list .worker-list {
-                flex-wrap: wrap;
-                white-space: normal;
-                overflow-x: hidden;
-                overflow-y: auto;
-                max-height: 96px;
-                align-content: flex-start;
+                display: flex;
+                flex-wrap: nowrap;
+                white-space: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                max-height: none;
+                align-content: center;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-x;
             }
             #progressTable .worker-token,
             #progressTable .duplicate-worker,
             .responsive-detail-list .worker-token,
             .responsive-detail-list .duplicate-worker {
-                max-width: 100%;
-                white-space: normal;
-                overflow-wrap: anywhere;
-                word-break: break-word;
+                flex: 0 0 auto;
+                max-width: none;
+                white-space: nowrap;
+                overflow-wrap: normal;
+                word-break: normal;
             }
             table.dataTable > tbody > tr.child ul.dtr-details > li,
             .responsive-detail-list .detail-item {
