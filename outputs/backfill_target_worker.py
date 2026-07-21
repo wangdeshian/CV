@@ -4,6 +4,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
@@ -60,6 +61,69 @@ def age_allowed(candidate_id, desired_age, candidate_ages):
     return abs(age - desired_age) <= MAX_DESIRED_AGE_GAP
 
 
+def fs_value_to_python(value):
+    if "stringValue" in value:
+        return value["stringValue"]
+    if "integerValue" in value:
+        return int(value["integerValue"])
+    if "doubleValue" in value:
+        return float(value["doubleValue"])
+    if "booleanValue" in value:
+        return value["booleanValue"]
+    if "timestampValue" in value:
+        return value["timestampValue"]
+    if "arrayValue" in value:
+        return [fs_value_to_python(item) for item in value["arrayValue"].get("values", [])]
+    if "mapValue" in value:
+        return {
+            key: fs_value_to_python(item)
+            for key, item in value["mapValue"].get("fields", {}).items()
+        }
+    return None
+
+
+def doc_array_field(doc, key):
+    if not doc or "fields" not in doc:
+        return []
+    value = doc["fields"].get(key)
+    if not value:
+        return []
+    parsed = fs_value_to_python(value)
+    return parsed if isinstance(parsed, list) else []
+
+
+def to_fs_value(value):
+    if isinstance(value, bool):
+        return {"booleanValue": value}
+    if isinstance(value, int):
+        return {"integerValue": str(value)}
+    if isinstance(value, float):
+        return {"doubleValue": value}
+    if isinstance(value, list):
+        return {"arrayValue": {"values": [to_fs_value(item) for item in value]}}
+    if isinstance(value, dict):
+        return {"mapValue": {"fields": {key: to_fs_value(item) for key, item in value.items()}}}
+    if value is None:
+        return {"nullValue": "NULL_VALUE"}
+    return {"stringValue": str(value)}
+
+
+def build_history_entry(now, local_date, emp, doc_id, added_codes, recommended_codes, merged_codes, demand):
+    return {
+        "runAt": now,
+        "date": local_date,
+        "source": "auto-match",
+        "employer": emp,
+        "caseId": doc_id,
+        "addedCandidates": added_codes,
+        "recommendedCandidates": recommended_codes,
+        "targetWorkerAfter": merged_codes,
+        "desiredAgeMin": demand.get("desiredAgeMin"),
+        "desiredHeightMin": demand.get("desiredHeightMin"),
+        "desiredWeightMin": demand.get("desiredWeightMin"),
+    }
+
+
 def main():
     active_ids = get_active_candidate_ids()
     candidate_ages = load_candidate_ages()
@@ -85,7 +149,9 @@ def main():
     docs = mc.fs_get_list("hiring_progress", page_size=100)
     updated = []
     skipped = []
-    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat().replace("+00:00", "Z")
+    local_date = now_dt.astimezone(ZoneInfo("Asia/Taipei")).date().isoformat()
 
     for doc in docs:
         emp = mc.field(doc, "empName") or ""
@@ -104,6 +170,7 @@ def main():
         for code in current_active_codes + new_codes:
             if code in active_ids and code not in merged_codes:
                 merged_codes.append(code)
+        added_codes = [code for code in new_codes if code not in current_active_codes]
         value = " ".join(merged_codes)
         if not value:
             if current_value.strip():
@@ -120,14 +187,21 @@ def main():
             skipped.append({"emp": emp, "id": doc_id, "reason": "沒有可回填推薦名單"})
             continue
 
-        body = {
-            "fields": {
-                "targetWorker": {"stringValue": value},
-                "updatedAt": {"timestampValue": now},
-            }
+        fields = {
+            "targetWorker": {"stringValue": value},
+            "updatedAt": {"timestampValue": now},
         }
-        mc._fs("PATCH", f"hiring_progress/{doc_id}?updateMask.fieldPaths=targetWorker&updateMask.fieldPaths=updatedAt", body)
-        updated.append({"emp": emp, "id": doc_id, "targetWorker": value})
+        update_masks = ["targetWorker", "updatedAt"]
+        if added_codes:
+            history = doc_array_field(doc, "recommendationHistory")
+            history.append(build_history_entry(now, local_date, emp, doc_id, added_codes, new_codes, merged_codes, demand))
+            fields["recommendationHistory"] = to_fs_value(history[-100:])
+            update_masks.append("recommendationHistory")
+
+        body = {"fields": fields}
+        mask_query = "&".join(f"updateMask.fieldPaths={field}" for field in update_masks)
+        mc._fs("PATCH", f"hiring_progress/{doc_id}?{mask_query}", body)
+        updated.append({"emp": emp, "id": doc_id, "targetWorker": value, "addedCandidates": added_codes})
         print(f"UPDATED {emp}: {value}")
 
     out = ROOT / "outputs" / "backfill_target_worker_result.json"

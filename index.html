@@ -106,6 +106,33 @@
         }
         .worker-list::-webkit-scrollbar { height: 6px; width: 6px; }
         .worker-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 999px; }
+        .target-worker-cell {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            min-width: 0;
+        }
+        .target-worker-cell .worker-list {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .btn-history {
+            flex: 0 0 auto;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-history:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
         .worker-token {
             display: inline-flex;
             align-items: center;
@@ -407,6 +434,10 @@
                 overflow-wrap: normal;
                 word-break: normal;
             }
+            .target-worker-cell {
+                align-items: flex-start;
+                flex-direction: column;
+            }
             table.dataTable > tbody > tr.child ul.dtr-details > li,
             .responsive-detail-list .detail-item {
                 grid-template-columns: 88px minmax(0, 1fr);
@@ -434,6 +465,105 @@
         .change-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:bold;margin-right:6px}
         .change-badge.added{background:#2e7d32;color:#fff}
         .change-badge.removed{background:#c62828;color:#fff}
+        .history-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 9999;
+            padding: 16px;
+        }
+        .history-modal.active { display: flex; }
+        .history-dialog {
+            width: min(720px, 100%);
+            max-height: min(80vh, 760px);
+            overflow: hidden;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+            display: flex;
+            flex-direction: column;
+        }
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .history-close {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+        }
+        .history-body {
+            padding: 14px 18px 18px;
+            overflow-y: auto;
+        }
+        .history-entry {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: #fff;
+        }
+        .history-entry-date {
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        .history-line {
+            display: grid;
+            grid-template-columns: 86px minmax(0, 1fr);
+            gap: 8px;
+            align-items: start;
+            margin-top: 6px;
+            color: #374151;
+        }
+        .history-label {
+            color: #6b7280;
+            font-weight: bold;
+        }
+        .history-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-width: 0;
+        }
+        .history-tag {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            color: #111827;
+            border-radius: 4px;
+            padding: 2px 6px;
+            white-space: nowrap;
+        }
+        .history-tag.added {
+            border-color: #86efac;
+            background: #ecfdf5;
+            color: #166534;
+            font-weight: bold;
+        }
+        .history-empty {
+            color: #6b7280;
+            text-align: center;
+            padding: 24px 0;
+        }
     </style>
 </head>
 <body>
@@ -545,6 +675,15 @@
           </div>
           <div id="candidateChangeLog"><div class="empty-state">點擊此分頁載入資料…</div></div>
         </div>
+</div>
+<div id="recommendationHistoryModal" class="history-modal" aria-hidden="true">
+    <div class="history-dialog" role="dialog" aria-modal="true" aria-labelledby="recommendationHistoryTitle">
+        <div class="history-header">
+            <div id="recommendationHistoryTitle" class="history-title">自動推薦紀錄</div>
+            <button type="button" class="history-close" id="recommendationHistoryClose" aria-label="關閉">×</button>
+        </div>
+        <div id="recommendationHistoryBody" class="history-body"></div>
+    </div>
 </div>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -838,6 +977,75 @@
         return (value || "").split(/[\s,，、`｀]+/).map(w => w.trim()).filter(w => w !== "");
     }
 
+    function normalizeHistoryList(value) {
+        return Array.isArray(value) ? value.filter(item => item && typeof item === 'object') : [];
+    }
+
+    function formatHistoryDate(item) {
+        if (item.date) return String(item.date);
+        if (item.runAt) {
+            const parsed = new Date(item.runAt);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toLocaleString('zh-TW', {
+                    timeZone: 'Asia/Taipei',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+        return '未知日期';
+    }
+
+    function renderHistoryTags(values, addedSet = new Set()) {
+        const list = Array.isArray(values) ? values : [];
+        if (!list.length) return '<span class="worker-empty">無</span>';
+        return `<div class="history-tags">${list.map(code => {
+            const text = String(code || '');
+            const tagClass = addedSet.has(text) ? 'history-tag added' : 'history-tag';
+            return `<span class="${tagClass}">${escapeHtml(text)}</span>`;
+        }).join('')}</div>`;
+    }
+
+    function showRecommendationHistory(docId) {
+        const record = cachedAllDocs.find(item => item.id === docId);
+        const modal = document.getElementById('recommendationHistoryModal');
+        const title = document.getElementById('recommendationHistoryTitle');
+        const body = document.getElementById('recommendationHistoryBody');
+        if (!modal || !title || !body) return;
+        const history = normalizeHistoryList(record?.recommendationHistory)
+            .slice()
+            .sort((a, b) => String(b.runAt || b.date || '').localeCompare(String(a.runAt || a.date || '')));
+        title.textContent = `${record?.empName || '此案件'}：自動推薦紀錄`;
+        if (!history.length) {
+            body.innerHTML = '<div class="history-empty">目前沒有自動推薦紀錄</div>';
+        } else {
+            body.innerHTML = history.map(item => {
+                const added = Array.isArray(item.addedCandidates) ? item.addedCandidates.map(String) : [];
+                const addedSet = new Set(added);
+                const recommended = Array.isArray(item.recommendedCandidates) ? item.recommendedCandidates : [];
+                const after = Array.isArray(item.targetWorkerAfter) ? item.targetWorkerAfter : [];
+                return `<div class="history-entry">
+                    <div class="history-entry-date">${escapeHtml(formatHistoryDate(item))}</div>
+                    <div class="history-line"><span class="history-label">新增</span>${renderHistoryTags(added, addedSet)}</div>
+                    <div class="history-line"><span class="history-label">當次推薦</span>${renderHistoryTags(recommended, addedSet)}</div>
+                    <div class="history-line"><span class="history-label">更新後</span>${renderHistoryTags(after)}</div>
+                </div>`;
+            }).join('');
+        }
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeRecommendationHistory() {
+        const modal = document.getElementById('recommendationHistoryModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
     function escapeHtml(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => ({
             "&": "&amp;",
@@ -899,8 +1107,12 @@
                     const tagClass = workerFrequency[w] > 1 ? "duplicate-worker" : "worker-token";
                     return `<span class="${tagClass}">${escapeHtml(w)}</span>`;
                 }).join('');
+                const historyCount = normalizeHistoryList(data.recommendationHistory).length;
+                const historyButton = historyCount
+                    ? `<button type="button" class="btn-history" data-id="${docId}" title="查看自動推薦紀錄">紀錄 ${historyCount}</button>`
+                    : '';
                 displayTargetWorker = workerTags
-                    ? `<div class="worker-list">${workerTags}</div>`
+                    ? `<div class="target-worker-cell"><div class="worker-list">${workerTags}</div>${historyButton}</div>`
                     : `<span class="worker-empty">無</span>`;
             }
 
@@ -1125,6 +1337,20 @@
                 alert("狀態更新失敗，請稍後再試！");
             }
         }
+    });
+
+    $('#tableBody').on('click', '.btn-history', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showRecommendationHistory($(this).data('id'));
+    });
+
+    document.getElementById('recommendationHistoryClose')?.addEventListener('click', closeRecommendationHistory);
+    document.getElementById('recommendationHistoryModal')?.addEventListener('click', function(e) {
+        if (e.target === this) closeRecommendationHistory();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeRecommendationHistory();
     });
 
     $('#tableBody').on('dblclick', '.editable', function() {
