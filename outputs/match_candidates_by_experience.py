@@ -24,6 +24,11 @@ PDF_TEXT_DIR = ROOT / "outputs" / "inspected_pdfs"
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
 PDF_SUMMARY = PDF_TEXT_DIR / "summary.json"
 MAX_DESIRED_AGE_GAP = 8
+SKIP_AUTO_MATCH_KEYWORDS = [
+    "工廠", "工業", "作業員", "產線", "包裝員", "製造",
+    "豆腐店",
+    "護理之家", "養護", "長照", "安養", "照護中心",
+]
 
 spec = importlib.util.spec_from_file_location("mc", ROOT / "outputs" / "match_candidates.py")
 mc = importlib.util.module_from_spec(spec)
@@ -82,6 +87,16 @@ def keyword_hits(text):
         if any(w.lower() in text.lower() for w in words):
             hits.add(key)
     return hits
+
+
+def skip_auto_match_reason(employer, text):
+    target = f"{employer or ''} {text or ''}"
+    for keyword in SKIP_AUTO_MATCH_KEYWORDS:
+        if keyword in target:
+            if keyword in {"護理之家", "養護", "長照", "安養", "照護中心"}:
+                return "護理之家／養護機構案件不自動特別配對"
+            return "工廠類案件不自動特別配對"
+    return ""
 
 
 def parse_candidate_detail(code):
@@ -193,6 +208,7 @@ def parse_employer_text(path):
         "specialWorkText": special[:500],
         "explicitTags": sorted(special_hits),
         "careDemandTags": sorted(care_demand),
+        "skipAutoMatchReason": skip_auto_match_reason(path.stem, compact),
     }
 
 
@@ -298,6 +314,7 @@ def main():
         if source_item:
             demand["id"] = source_item.get("id")
             demand["employer"] = source_item.get("emp") or demand["employer"]
+            demand["skipAutoMatchReason"] = skip_auto_match_reason(demand["employer"], demand.get("specialWorkText") or "")
         if not demand["textExtracted"]:
             results.append({
                 "id": demand.get("id"),
@@ -305,6 +322,17 @@ def main():
                 "sourceText": demand["sourceText"],
                 "status": "needs_ocr",
                 "reason": "PDF 文字抽取為空，需 OCR 或人工查看後才能依工作內容配對",
+                "recommendations": [],
+            })
+            continue
+        if demand.get("skipAutoMatchReason"):
+            results.append({
+                "id": demand.get("id"),
+                "employer": demand["employer"],
+                "sourceText": demand["sourceText"],
+                "status": "skipped_factory_or_care_facility",
+                "reason": demand["skipAutoMatchReason"],
+                "demand": demand,
                 "recommendations": [],
             })
             continue

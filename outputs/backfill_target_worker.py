@@ -124,6 +124,18 @@ def build_history_entry(now, local_date, emp, doc_id, added_codes, recommended_c
     }
 
 
+def auto_recommended_codes(history):
+    codes = set()
+    for entry in history:
+        if not isinstance(entry, dict):
+            continue
+        for code in entry.get("recommendedCandidates") or []:
+            codes.add(normalize_candidate_id(str(code)))
+        for code in entry.get("addedCandidates") or []:
+            codes.add(normalize_candidate_id(str(code)))
+    return codes
+
+
 def history_key(entry):
     return (
         entry.get("date") or "",
@@ -154,7 +166,14 @@ def main():
     rec_by_id = {}
     demand_by_emp = {}
     demand_by_id = {}
+    skipped_auto_match_emp = set()
+    skipped_auto_match_id = set()
     for row in results:
+        if row.get("status") == "skipped_factory_or_care_facility":
+            skipped_auto_match_emp.add(row["employer"])
+            if row.get("id"):
+                skipped_auto_match_id.add(row["id"])
+            continue
         demand = row.get("demand") or {}
         demand_by_emp[row["employer"]] = demand
         if row.get("id"):
@@ -181,6 +200,26 @@ def main():
         if not is_active_case(doc):
             continue
         current_value = mc.field(doc, "targetWorker") or ""
+        if doc_id in skipped_auto_match_id or emp in skipped_auto_match_emp:
+            history = dedupe_history(doc_array_field(doc, "recommendationHistory"))
+            auto_codes = auto_recommended_codes(history)
+            current_codes = extract_candidate_ids(current_value)
+            remaining_codes = [code for code in current_codes if code not in auto_codes]
+            value = " ".join(remaining_codes)
+            if value != current_value.strip() or history != doc_array_field(doc, "recommendationHistory"):
+                body = {
+                    "fields": {
+                        "targetWorker": {"stringValue": value},
+                        "recommendationHistory": to_fs_value(history[-100:]),
+                        "updatedAt": {"timestampValue": now},
+                    }
+                }
+                mc._fs("PATCH", f"hiring_progress/{doc_id}?updateMask.fieldPaths=targetWorker&updateMask.fieldPaths=recommendationHistory&updateMask.fieldPaths=updatedAt", body)
+                updated.append({"emp": emp, "id": doc_id, "targetWorker": value, "skippedAutoMatch": True})
+                print(f"SKIPPED {emp}: factory/care facility, removed auto-match targetWorker ids")
+            else:
+                skipped.append({"emp": emp, "id": doc_id, "reason": "工廠或護理之家不自動配對"})
+            continue
         demand = demand_by_id.get(doc_id) or demand_by_emp.get(emp) or {}
         desired_age = demand.get("desiredAgeMin")
         current_active_codes = [
