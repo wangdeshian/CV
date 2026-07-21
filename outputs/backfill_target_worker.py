@@ -192,7 +192,7 @@ def main():
             "updatedAt": {"timestampValue": now},
         }
         update_masks = ["targetWorker", "updatedAt"]
-        if added_codes:
+        if new_codes:
             history = doc_array_field(doc, "recommendationHistory")
             history.append(build_history_entry(now, local_date, emp, doc_id, added_codes, new_codes, merged_codes, demand))
             fields["recommendationHistory"] = to_fs_value(history[-100:])
