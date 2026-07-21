@@ -124,6 +124,28 @@ def build_history_entry(now, local_date, emp, doc_id, added_codes, recommended_c
     }
 
 
+def history_key(entry):
+    return (
+        entry.get("date") or "",
+        tuple(entry.get("recommendedCandidates") or []),
+        tuple(entry.get("targetWorkerAfter") or []),
+    )
+
+
+def dedupe_history(history):
+    seen = set()
+    deduped = []
+    for entry in history:
+        if not isinstance(entry, dict):
+            continue
+        key = history_key(entry)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(entry)
+    return deduped
+
+
 def main():
     active_ids = get_active_candidate_ids()
     candidate_ages = load_candidate_ages()
@@ -193,10 +215,14 @@ def main():
         }
         update_masks = ["targetWorker", "updatedAt"]
         if new_codes:
-            history = doc_array_field(doc, "recommendationHistory")
-            history.append(build_history_entry(now, local_date, emp, doc_id, added_codes, new_codes, merged_codes, demand))
-            fields["recommendationHistory"] = to_fs_value(history[-100:])
-            update_masks.append("recommendationHistory")
+            original_history = doc_array_field(doc, "recommendationHistory")
+            history = dedupe_history(original_history)
+            entry = build_history_entry(now, local_date, emp, doc_id, added_codes, new_codes, merged_codes, demand)
+            if history_key(entry) not in {history_key(item) for item in history}:
+                history.append(entry)
+            if history != original_history:
+                fields["recommendationHistory"] = to_fs_value(history[-100:])
+                update_masks.append("recommendationHistory")
 
         body = {"fields": fields}
         mask_query = "&".join(f"updateMask.fieldPaths={field}" for field in update_masks)
