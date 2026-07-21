@@ -24,6 +24,16 @@ PDF_TEXT_DIR = ROOT / "outputs" / "inspected_pdfs"
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
 PDF_SUMMARY = PDF_TEXT_DIR / "summary.json"
 MAX_DESIRED_AGE_GAP = 8
+ASSIGNED_CANDIDATE_BLOCKLIST = {
+    "SN.462",
+    "SN.459",
+    "SN.480",
+    "SJ.236",
+    "SJ.207",
+    "TB.7280",
+    "MKB.2680",
+    "CL.327",
+}
 SKIP_AUTO_MATCH_KEYWORDS = [
     "工廠", "工業", "作業員", "產線", "包裝員", "製造",
     "豆腐店",
@@ -121,6 +131,8 @@ def load_candidates(active_ids=None):
     for c in candidates:
         code = c.get("code") or ""
         if active_ids and code not in active_ids:
+            continue
+        if code in ASSIGNED_CANDIDATE_BLOCKLIST:
             continue
         if not code or code in seen:
             continue
