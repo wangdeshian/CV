@@ -465,6 +465,19 @@
         .change-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:bold;margin-right:6px}
         .change-badge.added{background:#2e7d32;color:#fff}
         .change-badge.removed{background:#c62828;color:#fff}
+        .change-status {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1e3a8a;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .change-status strong {
+            color: #1d4ed8;
+        }
         .history-modal {
             position: fixed;
             inset: 0;
@@ -679,6 +692,7 @@
             <input type="date" id="changeDateFilter">
             <button type="button" id="clearDateFilterBtn">清除篩選</button>
           </div>
+          <div id="candidateSnapshotStatus" class="change-status">尚未載入最後檢查狀態</div>
           <div id="candidateChangeLog"><div class="empty-state">點擊此分頁載入資料…</div></div>
         </div>
 </div>
@@ -693,7 +707,7 @@
 </div>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, updateDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -725,6 +739,7 @@
 
     let candidateChangesLoaded = false;
     let candidateChanges = [];
+    let candidateSnapshot = null;
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -758,6 +773,8 @@
         }
         container.innerHTML = '<div class="empty-state">載入中…</div>';
         try {
+            const snapshotDoc = await getDoc(doc(db, 'candidate_snapshots', 'latest'));
+            candidateSnapshot = snapshotDoc.exists() ? snapshotDoc.data() : null;
             const changesQuery = query(collection(db, 'candidate_changes'), orderBy('date', 'desc'), limit(100));
             const snapshot = await getDocs(changesQuery);
             candidateChanges = [];
@@ -771,8 +788,18 @@
 
     function renderCandidateChanges() {
         const container = document.getElementById('candidateChangeLog');
+        const statusBox = document.getElementById('candidateSnapshotStatus');
         const dateFilter = document.getElementById('changeDateFilter')?.value || '';
         if (!container) return;
+        if (statusBox) {
+            if (candidateSnapshot) {
+                const updatedAt = candidateSnapshot.updatedAt || '未知';
+                const count = candidateSnapshot.count ?? (Array.isArray(candidateSnapshot.ids) ? candidateSnapshot.ids.length : '未知');
+                statusBox.innerHTML = `最後檢查：<strong>${escapeHtml(updatedAt)}</strong>｜目前在架：<strong>${escapeHtml(count)}</strong> 位。下方只列「新增／下架」差異，沒有差異時日期不會往前跑。`;
+            } else {
+                statusBox.textContent = '尚未取得最後檢查狀態';
+            }
+        }
         const records = dateFilter
             ? candidateChanges.filter(item => String(item.date || item.createdAt || '').startsWith(dateFilter))
             : candidateChanges;
