@@ -775,7 +775,7 @@
         try {
             const snapshotDoc = await getDoc(doc(db, 'candidate_snapshots', 'latest'));
             candidateSnapshot = snapshotDoc.exists() ? snapshotDoc.data() : null;
-            const changesQuery = query(collection(db, 'candidate_changes'), orderBy('date', 'desc'), limit(100));
+            const changesQuery = query(collection(db, 'candidate_changes'), orderBy('date', 'desc'), limit(500));
             const snapshot = await getDocs(changesQuery);
             candidateChanges = [];
             snapshot.forEach(item => candidateChanges.push({ id: item.id, ...item.data() }));

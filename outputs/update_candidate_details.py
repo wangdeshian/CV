@@ -27,6 +27,8 @@ LIST_URL = BASE + "?fun=resume&sales=adam&page={page}&st=DESC&od=L&search=&stype
 FIREBASE_PROJECT = "adamcv-79d47"
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "AIzaSyAB-b45xKSpUg5I43NUxZtzjytj9p5Fu_A")
 FIRESTORE_BASE = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT}/databases/(default)/documents"
+MIN_REASONABLE_CANDIDATES = 20
+MAX_DROP_RATIO = 0.45
 
 
 def fetch_text(url):
@@ -79,6 +81,20 @@ def field(doc, key):
     if "arrayValue" in item:
         return [v.get("stringValue", "") for v in item["arrayValue"].get("values", [])]
     return None
+
+
+def change_doc_id(date, change_type, candidate_id):
+    safe_candidate = re.sub(r"[^A-Za-z0-9_-]+", "_", candidate_id).strip("_")
+    return f"{date}_{change_type}_{safe_candidate}"
+
+
+def write_candidate_change(date, change_type, candidate_id):
+    doc_id = change_doc_id(date, change_type, candidate_id)
+    _fs("PATCH", f"candidate_changes/{doc_id}", {"fields": _fields({
+        "date": date,
+        "type": change_type,
+        "candidateId": candidate_id,
+    })})
 
 
 def clean_text(value):
@@ -162,10 +178,17 @@ def main():
     previous_ids = set(field(snap, "ids") or []) if snap else set()
     current_id_set = set(current_ids)
 
+    if len(current_ids) < MIN_REASONABLE_CANDIDATES:
+        raise RuntimeError(f"候選人清單異常：只抓到 {len(current_ids)} 位，停止更新快照與履歷動態")
+    if previous_ids and len(current_ids) < len(previous_ids) * MAX_DROP_RATIO:
+        raise RuntimeError(
+            f"候選人清單異常：由 {len(previous_ids)} 位掉到 {len(current_ids)} 位，停止更新快照與履歷動態"
+        )
+
     for cid in sorted(current_id_set - previous_ids):
-        _fs("POST", "candidate_changes", {"fields": _fields({"date": today, "type": "added", "candidateId": cid})})
+        write_candidate_change(today, "added", cid)
     for cid in sorted(previous_ids - current_id_set):
-        _fs("POST", "candidate_changes", {"fields": _fields({"date": today, "type": "removed", "candidateId": cid})})
+        write_candidate_change(today, "removed", cid)
 
     _fs("PATCH", "candidate_snapshots/latest", {"fields": _fields({
         "ids": current_ids,
