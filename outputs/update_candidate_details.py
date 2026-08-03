@@ -16,7 +16,9 @@ import re
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "work" / "imaid"
@@ -173,7 +175,7 @@ def main():
         encoding="utf-8",
     )
     current_ids = sorted(item["code"] for item in all_candidates)
-    today = time.strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y-%m-%d")
     snap = _fs("GET", "candidate_snapshots/latest")
     previous_ids = set(field(snap, "ids") or []) if snap else set()
     current_id_set = set(current_ids)
