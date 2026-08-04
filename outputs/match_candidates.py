@@ -22,12 +22,39 @@ COUNTRY_MAP = {
     "MM": "緬甸",
 }
 
+_ID_TOKEN = None
+_ID_TOKEN_TRIED = False
+
+def get_id_token():
+    """匿名登入取得 idToken，讓 Firestore 規則可以要求 request.auth != null。
+
+    取不到 token 時回傳 None 並繼續，避免規則尚未收緊前流程直接中斷。
+    """
+    global _ID_TOKEN, _ID_TOKEN_TRIED
+    if _ID_TOKEN or _ID_TOKEN_TRIED:
+        return _ID_TOKEN
+    _ID_TOKEN_TRIED = True
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_API_KEY}"
+    body = json.dumps({"returnSecureToken": True}).encode()
+    req = urllib.request.Request(url, data=body, method="POST",
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            _ID_TOKEN = json.loads(r.read()).get("idToken")
+        print("匿名登入成功，寫入將帶 Firebase 驗證")
+    except Exception as e:
+        print(f"匿名登入失敗，改用未驗證模式：{e}")
+    return _ID_TOKEN
+
 def _fs(method, path, body=None):
     sep = "&" if "?" in path else "?"
     url  = f"{FIRESTORE_BASE}/{path}{sep}key={FIREBASE_API_KEY}"
     data = json.dumps(body).encode() if body else None
-    req  = urllib.request.Request(url, data=data, method=method,
-                                  headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    token = get_id_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req  = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read())

@@ -24,7 +24,9 @@ PDF_TEXT_DIR = ROOT / "outputs" / "inspected_pdfs"
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
 PDF_SUMMARY = PDF_TEXT_DIR / "summary.json"
 MAX_DESIRED_AGE_GAP = 8
-ASSIGNED_CANDIDATE_BLOCKLIST = {
+# 後備名單；正式名單放 Firestore automation_config/candidate_blocklist 的 codes 陣列，
+# 這樣要再排除誰不必改程式重推。
+FALLBACK_CANDIDATE_BLOCKLIST = {
     "SN.462",
     "SN.459",
     "SN.480",
@@ -34,11 +36,8 @@ ASSIGNED_CANDIDATE_BLOCKLIST = {
     "MKB.2680",
     "CL.327",
 }
-SKIP_AUTO_MATCH_KEYWORDS = [
-    "工廠", "工業", "作業員", "產線", "包裝員", "製造",
-    "豆腐店",
-    "護理之家", "養護", "長照", "安養", "照護中心",
-]
+FACILITY_KEYWORDS = ["護理之家", "養護", "長照", "安養", "照護中心", "康復之家", "老人院"]
+FACTORY_KEYWORDS = ["工廠", "工業", "作業員", "產線", "包裝員", "製造", "豆腐店", "食品廠"]
 
 spec = importlib.util.spec_from_file_location("mc", ROOT / "outputs" / "match_candidates.py")
 mc = importlib.util.module_from_spec(spec)
@@ -99,12 +98,28 @@ def keyword_hits(text):
     return hits
 
 
-def skip_auto_match_reason(employer, text):
-    target = f"{employer or ''} {text or ''}"
-    for keyword in SKIP_AUTO_MATCH_KEYWORDS:
-        if keyword in target:
-            if keyword in {"護理之家", "養護", "長照", "安養", "照護中心"}:
-                return "護理之家／養護機構案件不自動特別配對"
+def load_candidate_blocklist():
+    doc = mc._fs("GET", "automation_config/candidate_blocklist")
+    codes = set(mc.field(doc, "codes") or []) if doc else set()
+    if codes:
+        print(f"排除名單來自 Firestore：{len(codes)} 位")
+        return codes
+    print("Firestore 沒有排除名單，改用程式內後備名單")
+    return set(FALLBACK_CANDIDATE_BLOCKLIST)
+
+
+def skip_auto_match_reason(employer, text=None):
+    """只看雇主名稱判斷機構／工廠案件。
+
+    聘工表是制式表格，內文常出現「長照」「養護」等字樣（例如寫到長照補助），
+    以前連自由文字一起掃會把一般家庭看護案誤判成機構案整案跳過。
+    """
+    name = employer or ""
+    for keyword in FACILITY_KEYWORDS:
+        if keyword in name:
+            return "護理之家／養護機構案件不自動特別配對"
+    for keyword in FACTORY_KEYWORDS:
+        if keyword in name:
             return "工廠類案件不自動特別配對"
     return ""
 
@@ -124,15 +139,16 @@ def parse_candidate_detail(code):
     return text, hits, snippets[:3]
 
 
-def load_candidates(active_ids=None):
+def load_candidates(active_ids=None, blocklist=None):
     candidates = json.loads(CANDIDATE_LIST.read_text(encoding="utf-8"))
+    blocklist = blocklist or set()
     result = []
     seen = set()
     for c in candidates:
         code = c.get("code") or ""
         if active_ids and code not in active_ids:
             continue
-        if code in ASSIGNED_CANDIDATE_BLOCKLIST:
+        if code in blocklist:
             continue
         if not code or code in seen:
             continue
@@ -205,10 +221,11 @@ def parse_employer_text(path):
         inferred.add("mobility")
 
     care_demand = inferred | special_hits
+    employer = re.sub(r"^\d+_|_.*$", "", path.stem)
 
     return {
         "sourceText": str(path),
-        "employer": re.sub(r"^\d+_|_.*$", "", path.stem),
+        "employer": employer,
         "patientAge": patient_age,
         "patientHeight": patient_height,
         "patientWeight": patient_weight,
@@ -220,7 +237,7 @@ def parse_employer_text(path):
         "specialWorkText": special[:500],
         "explicitTags": sorted(special_hits),
         "careDemandTags": sorted(care_demand),
-        "skipAutoMatchReason": skip_auto_match_reason(path.stem, compact),
+        "skipAutoMatchReason": skip_auto_match_reason(employer),
     }
 
 
@@ -300,7 +317,8 @@ def score_candidate(candidate, demand):
 
 def main():
     active_ids = get_active_candidate_ids()
-    candidates = load_candidates(active_ids)
+    blocklist = load_candidate_blocklist()
+    candidates = load_candidates(active_ids, blocklist)
     print(f"目前在架候選人：{len(active_ids)}，本機可評分履歷：{len(candidates)}")
     active_by_text = {}
     if PDF_SUMMARY.exists():
@@ -326,7 +344,7 @@ def main():
         if source_item:
             demand["id"] = source_item.get("id")
             demand["employer"] = source_item.get("emp") or demand["employer"]
-            demand["skipAutoMatchReason"] = skip_auto_match_reason(demand["employer"], demand.get("specialWorkText") or "")
+            demand["skipAutoMatchReason"] = skip_auto_match_reason(demand["employer"])
         if not demand["textExtracted"]:
             results.append({
                 "id": demand.get("id"),

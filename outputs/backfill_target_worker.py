@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,23 +11,40 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULT_PATH = ROOT / "outputs" / "experience_match_results.json"
 CANDIDATE_LIST = ROOT / "work" / "imaid" / "candidates-list.json"
 MAX_DESIRED_AGE_GAP = 8
+DRY_RUN = os.environ.get("DRY_RUN") == "1"
 
 spec = importlib.util.spec_from_file_location("mc", ROOT / "outputs" / "match_candidates.py")
 mc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mc)
 
 
-def is_active_case(doc):
+def patch_case(doc_id, fields, update_masks):
+    """統一走這裡，DRY_RUN=1 時只印出不寫入。"""
+    mask_query = "&".join(f"updateMask.fieldPaths={name}" for name in update_masks)
+    if DRY_RUN:
+        print(f"  [DRY_RUN] 略過寫入 {doc_id}（{', '.join(update_masks)}）")
+        return
+    mc._fs("PATCH", f"hiring_progress/{doc_id}?{mask_query}", {"fields": fields})
+
+
+def case_is_open(doc):
+    """尚未確定人選、未暫停、未封存。"""
     confirmed = mc.field(doc, "confirmedWorker") or ""
     status = mc.field(doc, "formStatus") or ""
-    file_url = mc.field(doc, "fileUrl") or ""
     if confirmed and confirmed not in ("", "尚未確定"):
         return False
     if status == "暫停":
         return False
-    if not file_url:
+    if mc.field(doc, "isArchived"):
         return False
     return True
+
+
+def is_active_case(doc):
+    """會進入自動配對的案件：未確定人選、未暫停、未封存、且有聘工表。"""
+    if not case_is_open(doc):
+        return False
+    return bool(mc.field(doc, "fileUrl") or "")
 
 
 def get_active_candidate_ids():
@@ -197,9 +215,25 @@ def main():
     for doc in docs:
         emp = mc.field(doc, "empName") or ""
         doc_id = doc["name"].split("/")[-1]
-        if not is_active_case(doc):
-            continue
         current_value = mc.field(doc, "targetWorker") or ""
+        if not is_active_case(doc):
+            # 沒有聘工表的案件不做配對，但已下架的編號還是要清掉。
+            # 暫停、已封存、已確定人選的案件完全不碰。
+            if case_is_open(doc) and current_value.strip():
+                kept = [c for c in extract_candidate_ids(current_value) if c in active_ids]
+                value = " ".join(kept)
+                if value != current_value.strip():
+                    patch_case(
+                        doc_id,
+                        {
+                            "targetWorker": {"stringValue": value},
+                            "updatedAt": {"timestampValue": now},
+                        },
+                        ["targetWorker", "updatedAt"],
+                    )
+                    updated.append({"emp": emp, "id": doc_id, "targetWorker": value, "cleanupOnly": True})
+                    print(f"CLEANED {emp}: 無聘工表，僅移除已下架編號 -> {value or '(清空)'}")
+            continue
         if doc_id in skipped_auto_match_id or emp in skipped_auto_match_emp:
             history = dedupe_history(doc_array_field(doc, "recommendationHistory"))
             auto_codes = auto_recommended_codes(history)
@@ -207,14 +241,15 @@ def main():
             remaining_codes = [code for code in current_codes if code not in auto_codes]
             value = " ".join(remaining_codes)
             if value != current_value.strip() or history != doc_array_field(doc, "recommendationHistory"):
-                body = {
-                    "fields": {
+                patch_case(
+                    doc_id,
+                    {
                         "targetWorker": {"stringValue": value},
                         "recommendationHistory": to_fs_value(history[-100:]),
                         "updatedAt": {"timestampValue": now},
-                    }
-                }
-                mc._fs("PATCH", f"hiring_progress/{doc_id}?updateMask.fieldPaths=targetWorker&updateMask.fieldPaths=recommendationHistory&updateMask.fieldPaths=updatedAt", body)
+                    },
+                    ["targetWorker", "recommendationHistory", "updatedAt"],
+                )
                 updated.append({"emp": emp, "id": doc_id, "targetWorker": value, "skippedAutoMatch": True})
                 print(f"SKIPPED {emp}: factory/care facility, removed auto-match targetWorker ids")
             else:
@@ -222,10 +257,17 @@ def main():
             continue
         demand = demand_by_id.get(doc_id) or demand_by_emp.get(emp) or {}
         desired_age = demand.get("desiredAgeMin")
-        current_active_codes = [
-            code for code in extract_candidate_ids(current_value)
-            if code in active_ids and age_allowed(code, desired_age, candidate_ages)
-        ]
+        existing_history = dedupe_history(doc_array_field(doc, "recommendationHistory"))
+        auto_codes = auto_recommended_codes(existing_history)
+        # 已下架的一律移除；年齡規則只套用在自動配對放上去的編號，
+        # 手動輸入的編號不因年齡落差被刪掉。
+        current_active_codes = []
+        for code in extract_candidate_ids(current_value):
+            if code not in active_ids:
+                continue
+            if code in auto_codes and not age_allowed(code, desired_age, candidate_ages):
+                continue
+            current_active_codes.append(code)
         new_codes = rec_by_id.get(doc_id) or rec_by_emp.get(emp) or []
         merged_codes = []
         for code in current_active_codes + new_codes:
@@ -235,13 +277,14 @@ def main():
         value = " ".join(merged_codes)
         if not value:
             if current_value.strip():
-                body = {
-                    "fields": {
+                patch_case(
+                    doc_id,
+                    {
                         "targetWorker": {"stringValue": ""},
                         "updatedAt": {"timestampValue": now},
-                    }
-                }
-                mc._fs("PATCH", f"hiring_progress/{doc_id}?updateMask.fieldPaths=targetWorker&updateMask.fieldPaths=updatedAt", body)
+                    },
+                    ["targetWorker", "updatedAt"],
+                )
                 updated.append({"emp": emp, "id": doc_id, "targetWorker": "", "removedInactiveOnly": True})
                 print(f"CLEARED {emp}: removed inactive targetWorker ids")
                 continue
@@ -255,7 +298,7 @@ def main():
         update_masks = ["targetWorker", "updatedAt"]
         if new_codes:
             original_history = doc_array_field(doc, "recommendationHistory")
-            history = dedupe_history(original_history)
+            history = list(existing_history)
             entry = build_history_entry(now, local_date, emp, doc_id, added_codes, new_codes, merged_codes, demand)
             if history_key(entry) not in {history_key(item) for item in history}:
                 history.append(entry)
@@ -263,9 +306,13 @@ def main():
                 fields["recommendationHistory"] = to_fs_value(history[-100:])
                 update_masks.append("recommendationHistory")
 
-        body = {"fields": fields}
-        mask_query = "&".join(f"updateMask.fieldPaths={field}" for field in update_masks)
-        mc._fs("PATCH", f"hiring_progress/{doc_id}?{mask_query}", body)
+        if value == current_value.strip() and "recommendationHistory" not in update_masks:
+            # 內容沒有變化就不要寫，免得每天把 updatedAt 洗掉、看不出真正的異動。
+            skipped.append({"emp": emp, "id": doc_id, "reason": "推薦名單與現況相同，未變更"})
+            print(f"UNCHANGED {emp}: {value}")
+            continue
+
+        patch_case(doc_id, fields, update_masks)
         updated.append({"emp": emp, "id": doc_id, "targetWorker": value, "addedCandidates": added_codes})
         print(f"UPDATED {emp}: {value}")
 

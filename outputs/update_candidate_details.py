@@ -46,11 +46,37 @@ def fetch_text(url):
     return raw.decode("utf-8", errors="replace")
 
 
+_ID_TOKEN = None
+_ID_TOKEN_TRIED = False
+
+
+def get_id_token():
+    """匿名登入取得 idToken，讓 Firestore 規則可以要求 request.auth != null。"""
+    global _ID_TOKEN, _ID_TOKEN_TRIED
+    if _ID_TOKEN or _ID_TOKEN_TRIED:
+        return _ID_TOKEN
+    _ID_TOKEN_TRIED = True
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_API_KEY}"
+    body = json.dumps({"returnSecureToken": True}).encode()
+    req = urllib.request.Request(url, data=body, method="POST", headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            _ID_TOKEN = json.loads(response.read()).get("idToken")
+        print("匿名登入成功，寫入將帶 Firebase 驗證")
+    except Exception as exc:
+        print(f"匿名登入失敗，改用未驗證模式：{exc}")
+    return _ID_TOKEN
+
+
 def _fs(method, path, body=None):
     sep = "&" if "?" in path else "?"
     url = f"{FIRESTORE_BASE}/{path}{sep}key={FIREBASE_API_KEY}"
     data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    token = get_id_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=20) as response:
             return json.loads(response.read())
@@ -192,7 +218,12 @@ def main():
     for cid in sorted(previous_ids - current_id_set):
         write_candidate_change(today, "removed", cid)
 
-    _fs("PATCH", "candidate_snapshots/latest", {"fields": _fields({
+    # 一定要帶 updateMask，否則 Firestore REST 會把整份文件換掉；
+    # 之前 ids/count 被清空就是漏了這個。
+    snapshot_mask = "&".join(
+        f"updateMask.fieldPaths={name}" for name in ("ids", "updatedAt", "count")
+    )
+    _fs("PATCH", f"candidate_snapshots/latest?{snapshot_mask}", {"fields": _fields({
         "ids": current_ids,
         "updatedAt": today,
         "count": len(current_ids),

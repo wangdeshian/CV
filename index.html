@@ -478,6 +478,12 @@
         .change-status strong {
             color: #1d4ed8;
         }
+        .snapshot-stale {
+            display: block;
+            margin-top: 6px;
+            font-weight: 700;
+            color: #b91c1c;
+        }
         .history-modal {
             position: fixed;
             inset: 0;
@@ -795,7 +801,13 @@
             if (candidateSnapshot) {
                 const updatedAt = candidateSnapshot.updatedAt || '未知';
                 const count = candidateSnapshot.count ?? (Array.isArray(candidateSnapshot.ids) ? candidateSnapshot.ids.length : '未知');
-                statusBox.innerHTML = `最後檢查：<strong>${escapeHtml(updatedAt)}</strong>｜目前在架：<strong>${escapeHtml(count)}</strong> 位。下方只列「新增／下架」差異，沒有差異時日期不會往前跑。`;
+                // 自動排程有可能整天沒被觸發，這裡直接把「幾天沒跑」講出來，
+                // 免得只看到舊日期卻以為是「今天剛好沒有異動」。
+                const staleDays = daysSinceTaipei(updatedAt);
+                const warning = staleDays === null || staleDays <= 1
+                    ? ''
+                    : `<span class="snapshot-stale">⚠ 已經 ${staleDays} 天沒有自動更新，請到 GitHub Actions 確認排程有沒有跑。</span>`;
+                statusBox.innerHTML = `最後檢查：<strong>${escapeHtml(updatedAt)}</strong>｜目前在架：<strong>${escapeHtml(count)}</strong> 位。下方只列「新增／下架」差異，沒有差異時日期不會往前跑。${warning}`;
             } else {
                 statusBox.textContent = '尚未取得最後檢查狀態';
             }
@@ -1083,6 +1095,14 @@
         if (!modal) return;
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function daysSinceTaipei(dateText) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateText || ""))) return null;
+        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+        const diff = Date.parse(`${today}T00:00:00Z`) - Date.parse(`${dateText}T00:00:00Z`);
+        if (Number.isNaN(diff)) return null;
+        return Math.round(diff / 86400000);
     }
 
     function escapeHtml(value) {

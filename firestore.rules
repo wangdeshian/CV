@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// 部署方式：Firebase Console -> Firestore Database -> 規則 -> 貼上 -> 發布
+//
+// 目前網頁 (index.html) 與自動化腳本 (outputs/*.py) 都會先做 Firebase 匿名登入，
+// 所以下面這組規則不會擋到正常運作，但會擋掉「只拿 API key 直接打 REST API」的寫入。
+//
+// 注意：匿名登入任何人都申請得到，所以這只擋掉隨手亂打的腳本，
+// 擋不住刻意先匿名登入再寫入的人。要真正鎖住必須改成帳號密碼登入，
+// 把 signedIn() 換成 request.auth.uid == '<你的 UID>'。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 雇主案件：網頁要能新增、編輯、刪除；自動化只改 targetWorker 等欄位。
+    match /hiring_progress/{docId} {
+      allow read: if true;
+      allow create, update, delete: if signedIn();
+    }
+
+    // 候選人在架快照：只有自動化會寫。
+    match /candidate_snapshots/{docId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    // 履歷動態（新增／下架紀錄）。
+    match /candidate_changes/{docId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    // 自動配對設定，例如 candidate_blocklist。
+    // 只從 Firebase Console 手動編輯，程式端唯讀。
+    match /automation_config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 其他集合一律禁止。
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
