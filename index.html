@@ -159,6 +159,7 @@
             vertical-align: middle;
         }
         .editable:hover { border-color: #3498db; background-color: #f0f8ff; }
+        .worker-type-edit { display: none; }
         .form-section {
             background-color: #fdfdfd; border: 1px solid #eee; padding: 15px;
             margin-bottom: 20px; border-radius: 6px; display: grid;
@@ -379,9 +380,29 @@
             #progressTable td:nth-child(3) {
                 width: 58px;
             }
+            #progressTable th:nth-child(4),
+            #progressTable td:nth-child(4) {
+                width: 96px;
+            }
             #progressTable th:nth-child(13),
             #progressTable td:nth-child(13) {
                 width: 156px;
+            }
+            .worker-type-edit {
+                display: block;
+                margin: 2px auto 0;
+                min-height: 32px;
+                padding: 2px 8px;
+                border: 1px solid #bfdbfe;
+                border-radius: 4px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                font-size: 13px;
+            }
+            #progressTable [data-field="workerType"] .edit-input {
+                width: 100%;
+                min-height: 38px;
+                font-size: 16px;
             }
             #progressTable th,
             #progressTable td {
@@ -949,7 +970,7 @@
             pageLength: 50,
             ordering: false,
             columnDefs: [
-                { className: 'all', targets: [0, 1, 2, 12] },
+                { className: 'all', targets: [0, 1, 3] },
                 { responsivePriority: 1, targets: 1 },
                 { responsivePriority: 2, targets: 2 },
                 { responsivePriority: 3, targets: 12 },
@@ -1186,7 +1207,7 @@
                 dragHandleHtml,
                 `<span class="editable" data-id="${docId}" data-field="empName" data-raw-val="${data.empName || ''}">${data.empName || ""}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="recruitmentLetter" data-raw-val="${data.recruitmentLetter || '初招'}">${data.recruitmentLetter || "初招"}</span>`,
-                `<span class="editable" data-id="${docId}" data-field="workerType" data-raw-val="${data.workerType || ''}">${data.workerType || "未設定"}</span>`,
+                `<span class="editable" data-id="${docId}" data-field="workerType" data-raw-val="${data.workerType || ''}">${data.workerType || "未設定"}<button type="button" class="worker-type-edit" aria-label="編輯聘僱類別">編輯</button></span>`,
                 `<span class="editable" data-id="${docId}" data-field="targetWorker" data-raw-val="${data.targetWorker || ''}">${displayTargetWorker}</span>`,
                 `<span class="editable" data-id="${docId}" data-field="videoTime" data-raw-val="${data.videoTime || ''}">${formatVideoTimeForDisplay(data.videoTime)}</span>`,
                 `<span class="editable ${isConfirmed ? 'status-confirmed' : ''}" data-id="${docId}" data-field="confirmedWorker" data-raw-val="${data.confirmedWorker || '尚未確定'}">${data.confirmedWorker || "尚未確定"}</span>`,
@@ -1415,6 +1436,11 @@
         if (e.key === 'Escape') closeRecommendationHistory();
     });
 
+    $('#tableBody').on('click', '.worker-type-edit', function(e) {
+        e.stopPropagation();
+        $(this).closest('.editable').trigger('dblclick');
+    });
+
     $('#tableBody').on('dblclick', '.editable', function() {
         if ($(this).find('input, select').length > 0) return;
         const rawVal = $(this).attr('data-raw-val');
@@ -1422,6 +1448,7 @@
         const docId = $(this).data('id');
         const fieldName = $(this).data('field');
         const $cell = $(this);
+        const originalHtml = $cell.html();
         let inputHtml = '';
         if (fieldName === 'confirmedWorker') {
             inputHtml = `<select class="edit-input">
@@ -1456,9 +1483,8 @@
         }
         $cell.html(inputHtml);
         const $input = $cell.find('.edit-input');
-        $input.focus();
         let isSaving = false;
-        $input.on('blur keypress', async function(e) {
+        $input.on(fieldName === 'workerType' ? 'change blur keypress' : 'blur keypress', async function(e) {
             if (e.type === 'keypress' && e.which !== 13) return;
             if (e.which === 13) e.preventDefault();
             if (isSaving) return;
@@ -1470,6 +1496,10 @@
                 return;
             }
             if (newValue === currentText.trim()) {
+                if (fieldName === 'workerType') {
+                    $cell.html(originalHtml);
+                    return;
+                }
                 try { await updateDoc(doc(db, "hiring_progress", docId), { updatedAt: serverTimestamp() }); } catch (e) {}
                 return;
             }
@@ -1480,9 +1510,11 @@
                 await updateDoc(doc(db, "hiring_progress", docId), updateData);
             } catch (error) {
                 console.error("更新錯誤：", error);
+                if (fieldName === 'workerType') $cell.html(originalHtml);
                 alert("修改失敗，請稍後再試！");
             }
         });
+        $input.focus();
     });
 </script>
 </body>
