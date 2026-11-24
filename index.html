@@ -617,6 +617,8 @@
             <select id="workerType">
                 <option value="看護工">看護工</option>
                 <option value="幫傭">幫傭</option>
+                <option value="製造業">製造業</option>
+                <option value="護理之家">護理之家</option>
             </select>
         </div>
         <div class="form-group">
@@ -1437,6 +1439,8 @@
                 ${currentText === '' ? '<option value="" selected disabled>未設定</option>' : ''}
                 <option value="看護工" ${currentText==='看護工'?'selected':''}>看護工</option>
                 <option value="幫傭" ${currentText==='幫傭'?'selected':''}>幫傭</option>
+                <option value="製造業" ${currentText==='製造業'?'selected':''}>製造業</option>
+                <option value="護理之家" ${currentText==='護理之家'?'selected':''}>護理之家</option>
             </select>`;
         } else if (fieldName === 'formStatus') {
             inputHtml = `<select class="edit-input">
